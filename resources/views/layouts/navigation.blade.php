@@ -16,7 +16,7 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    <!-- [BARU] Dropdown Master Data untuk Admin -->
+                    <!-- Dropdown Master Data untuk Admin -->
                     @role('Admin')
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
                         <x-dropdown align="left" width="48">
@@ -49,6 +49,10 @@
                                 </x-dropdown-link>
                                 <x-dropdown-link :href="route('suppliers.index')">
                                     {{ __('Manajemen Supplier') }}
+                                </x-dropdown-link>
+                                <!-- [BARU] Tambahkan link ini -->
+                                <x-dropdown-link :href="route('customers.index')">
+                                    {{ __('Manajemen Pelanggan') }}
                                 </x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
@@ -110,7 +114,7 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
 
-            <!-- [BARU] Link Master Data untuk Admin (Responsive) -->
+            <!-- Link Master Data untuk Admin (Responsive) -->
             @role('Admin')
                 <div class="pt-4 pb-1 border-t border-gray-200">
                     <div class="px-4">
@@ -134,6 +138,10 @@
                         </x-responsive-nav-link>
                          <x-responsive-nav-link :href="route('suppliers.index')">
                             {{ __('Manajemen Supplier') }}
+                        </x-responsive-nav-link>
+                        <!-- [BARU] Tambahkan link ini -->
+                        <x-responsive-nav-link :href="route('customers.index')">
+                            {{ __('Manajemen Pelanggan') }}
                         </x-responsive-nav-link>
                     </div>
                 </div>

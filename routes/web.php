@@ -6,7 +6,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductTypeController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SupplierController; // <-- [BARU] Tambahkan ini
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\CustomerController; // <-- [BARU] Tambahkan ini
 
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +26,8 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::resource('product-categories', ProductCategoryController::class);
     Route::resource('product-types', ProductTypeController::class);
     Route::resource('products', ProductController::class);
-    Route::resource('suppliers', SupplierController::class); // <-- [BARU] Tambahkan ini
+    Route::resource('suppliers', SupplierController::class);
+    Route::resource('customers', CustomerController::class); // <-- [BARU] Tambahkan ini
 });
 
 Route::middleware('auth')->group(function () {
