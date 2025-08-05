@@ -7,7 +7,8 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductTypeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\CustomerController; // <-- [BARU] Tambahkan ini
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PurchaseController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -27,7 +28,12 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::resource('product-types', ProductTypeController::class);
     Route::resource('products', ProductController::class);
     Route::resource('suppliers', SupplierController::class);
-    Route::resource('customers', CustomerController::class); // <-- [BARU] Tambahkan ini
+    Route::resource('customers', CustomerController::class);
+    
+    // [BARU] Tambahkan rute 'cancel' sebelum resource controller
+    Route::delete('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+    
+    Route::resource('purchases', PurchaseController::class);
 });
 
 Route::middleware('auth')->group(function () {

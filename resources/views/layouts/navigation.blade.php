@@ -16,44 +16,40 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    <!-- Dropdown Master Data untuk Admin -->
                     @role('Admin')
+                    <!-- Dropdown Master Data -->
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
                         <x-dropdown align="left" width="48">
                             <x-slot name="trigger">
                                 <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                                     <div>Master Data</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
+                                    <div class="ms-1"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></div>
                                 </button>
                             </x-slot>
-
                             <x-slot name="content">
-                                <x-dropdown-link :href="route('roles.index')">
-                                    {{ __('Manajemen Peran') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('users.index')">
-                                    {{ __('Manajemen Pengguna') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('product-categories.index')">
-                                    {{ __('Manajemen Kategori Produk') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('product-types.index')">
-                                    {{ __('Manajemen Jenis Produk') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('products.index')">
-                                    {{ __('Manajemen Produk') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('suppliers.index')">
-                                    {{ __('Manajemen Supplier') }}
-                                </x-dropdown-link>
-                                <!-- [BARU] Tambahkan link ini -->
-                                <x-dropdown-link :href="route('customers.index')">
-                                    {{ __('Manajemen Pelanggan') }}
-                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-dropdown-link>
+                            </x-slot>
+                        </x-dropdown>
+                    </div>
+
+                    <!-- Dropdown Transaksi -->
+                    <div class="hidden sm:flex sm:items-center sm:ms-6">
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                    <div>Transaksi</div>
+                                    <div class="ms-1"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></div>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                <!-- [MODIFIKASI] Arahkan ke route index -->
+                                <x-dropdown-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
                     </div>
@@ -67,29 +63,14 @@
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                             <div>{{ Auth::user()->name }}</div>
-
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
+                            <div class="ms-1"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></div>
                         </button>
                     </x-slot>
-
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
+                        <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Log Out') }}</x-dropdown-link>
                         </form>
                     </x-slot>
                 </x-dropdown>
@@ -110,43 +91,32 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-
-            <!-- Link Master Data untuk Admin (Responsive) -->
-            @role('Admin')
-                <div class="pt-4 pb-1 border-t border-gray-200">
-                    <div class="px-4">
-                        <div class="font-medium text-base text-gray-800">Master Data</div>
-                    </div>
-                    <div class="mt-3 space-y-1">
-                        <x-responsive-nav-link :href="route('roles.index')">
-                            {{ __('Manajemen Peran') }}
-                        </x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('users.index')">
-                            {{ __('Manajemen Pengguna') }}
-                        </x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('product-categories.index')">
-                            {{ __('Manajemen Kategori Produk') }}
-                        </x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('product-types.index')">
-                            {{ __('Manajemen Jenis Produk') }}
-                        </x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('products.index')">
-                            {{ __('Manajemen Produk') }}
-                        </x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('suppliers.index')">
-                            {{ __('Manajemen Supplier') }}
-                        </x-responsive-nav-link>
-                        <!-- [BARU] Tambahkan link ini -->
-                        <x-responsive-nav-link :href="route('customers.index')">
-                            {{ __('Manajemen Pelanggan') }}
-                        </x-responsive-nav-link>
-                    </div>
-                </div>
-            @endrole
+            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">{{ __('Dashboard') }}</x-responsive-nav-link>
         </div>
+
+        @role('Admin')
+        <!-- Responsive Master Data -->
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Master Data</div></div>
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-responsive-nav-link>
+            </div>
+        </div>
+        <!-- Responsive Transaksi -->
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Transaksi</div></div>
+            <div class="mt-3 space-y-1">
+                <!-- [MODIFIKASI] Arahkan ke route index -->
+                <x-responsive-nav-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-responsive-nav-link>
+            </div>
+        </div>
+        @endrole
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
@@ -154,21 +124,11 @@
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
             </div>
-
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-
-                <!-- Authentication -->
+                <x-responsive-nav-link :href="route('profile.edit')">{{ __('Profile') }}</x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Log Out') }}</x-responsive-nav-link>
                 </form>
             </div>
         </div>
