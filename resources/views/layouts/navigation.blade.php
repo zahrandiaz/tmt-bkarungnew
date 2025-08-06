@@ -48,8 +48,10 @@
                                 </button>
                             </x-slot>
                             <x-slot name="content">
-                                <!-- [MODIFIKASI] Arahkan ke route index -->
                                 <x-dropdown-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-dropdown-link>
+                                <!-- [MODIFIKASI] Tambahkan link daftar penjualan dan ubah link tambah penjualan -->
+                                <x-dropdown-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
                     </div>
@@ -112,8 +114,10 @@
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4"><div class="font-medium text-base text-gray-800">Transaksi</div></div>
             <div class="mt-3 space-y-1">
-                <!-- [MODIFIKASI] Arahkan ke route index -->
                 <x-responsive-nav-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-responsive-nav-link>
+                <!-- [MODIFIKASI] Tambahkan link daftar dan ubah link tambah -->
+                <x-responsive-nav-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-responsive-nav-link>
             </div>
         </div>
         @endrole
