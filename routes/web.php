@@ -9,7 +9,9 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PurchaseController;
-use App\Http\Controllers\SaleController; // <-- [BARU] Tambahkan ini
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -17,9 +19,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'role:Admin'])->group(function () {
     // Master Data
@@ -39,6 +40,10 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     // Rute 'cancel' untuk soft delete akan kita gunakan nanti
     Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
     Route::resource('sales', SaleController::class);
+
+    // [BARU] Rute untuk Laporan
+    Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
+    Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases');
 });
 
 Route::middleware('auth')->group(function () {
