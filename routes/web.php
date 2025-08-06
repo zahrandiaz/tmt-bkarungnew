@@ -46,6 +46,11 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases');
     Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
     Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss');
+
+    // [BARU] Rute untuk Ekspor
+    Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export');
+    Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export');
+    Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export');
 });
 
 Route::middleware('auth')->group(function () {
