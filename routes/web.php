@@ -44,6 +44,8 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     // [BARU] Rute untuk Laporan
     Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
     Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases');
+    Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
+    Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss');
 });
 
 Route::middleware('auth')->group(function () {

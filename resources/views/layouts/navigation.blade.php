@@ -67,6 +67,8 @@
                                 <x-slot name="content">
                                     <x-dropdown-link :href="route('reports.sales')">{{ __('Laporan Penjualan') }}</x-dropdown-link>
                                     <x-dropdown-link :href="route('reports.purchases')">{{ __('Laporan Pembelian') }}</x-dropdown-link>
+                                    <x-dropdown-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-dropdown-link>
+                                    <x-dropdown-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-dropdown-link>
                                 </x-slot>
                             </x-dropdown>
                         </div>
@@ -141,6 +143,8 @@
                 <div class="mt-3 space-y-1">
                     <x-responsive-nav-link :href="route('reports.sales')">{{ __('Laporan Penjualan') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('reports.purchases')">{{ __('Laporan Pembelian') }}</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
                 </div>
             </div>
         @endrole
