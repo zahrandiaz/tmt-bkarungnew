@@ -6,7 +6,12 @@ use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\Purchase;
 use App\Models\Product;
+use App\Models\SaleDetail;
 use Carbon\Carbon;
+use App\Exports\SalesExport;
+use App\Exports\PurchasesExport;
+use App\Exports\StockExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -99,5 +104,38 @@ class ReportController extends Controller
             'totalCostOfGoods' => $totalCostOfGoods,
             'totalProfit' => $totalProfit,
         ]);
+    }
+
+    /**
+     * [BARU] Menangani permintaan ekspor untuk Laporan Penjualan.
+     */
+    public function exportSales(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $fileName = 'laporan-penjualan-' . Carbon::now()->format('Y-m-d') . '.csv';
+
+        return Excel::download(new SalesExport($startDate, $endDate), $fileName);
+    }
+
+    /**
+     * [BARU] Menangani permintaan ekspor untuk Laporan Pembelian.
+     */
+    public function exportPurchases(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $fileName = 'laporan-pembelian-' . Carbon::now()->format('Y-m-d') . '.csv';
+
+        return Excel::download(new PurchasesExport($startDate, $endDate), $fileName);
+    }
+
+    /**
+     * [BARU] Menangani permintaan ekspor untuk Laporan Stok.
+     */
+    public function exportStock()
+    {
+        $fileName = 'laporan-stok-' . Carbon::now()->format('Y-m-d') . '.csv';
+        return Excel::download(new StockExport(), $fileName);
     }
 }
