@@ -16,14 +16,12 @@
                         </div>
                     @endif
 
-                    {{-- [BARU] Tambahkan blok ini untuk menampilkan pesan Eror --}}
                     @if (session('error'))
                         <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
                             {{ session('error') }}
                         </div>
                     @endif
 
-                    {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}
                     @hasanyrole('Admin|Manager')
                     <div class="mb-4">
                         <a href="{{ route('suppliers.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
@@ -39,7 +37,6 @@
                                     <th scope="col" class="px-6 py-3">Nama</th>
                                     <th scope="col" class="px-6 py-3">Telepon</th>
                                     <th scope="col" class="px-6 py-3">Alamat</th>
-                                    {{-- Kolom Aksi hanya muncul untuk Admin dan Manager --}}
                                     @hasanyrole('Admin|Manager')
                                     <th scope="col" class="px-6 py-3">Aksi</th>
                                     @endhasanyrole
@@ -57,16 +54,17 @@
                                     <td class="px-6 py-4">
                                         {{ $supplier->address }}
                                     </td>
-                                    {{-- Tombol Edit & Hapus hanya muncul untuk Admin dan Manager --}}
                                     @hasanyrole('Admin|Manager')
                                     <td class="px-6 py-4">
                                         <div class="flex space-x-2">
-                                            <a href="{{ route('suppliers.edit', $supplier->id) }}" class="font-medium text-blue-600 hover:underline">Edit</a>
+                                            {{-- [MODIFIKASI] Mengubah gaya tombol Edit --}}
+                                            <a href="{{ route('suppliers.edit', $supplier->id) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
                                             
                                             <form method="POST" action="{{ route('suppliers.destroy', $supplier->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus supplier ini?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="font-medium text-red-600 hover:underline">Hapus</button>
+                                                {{-- [MODIFIKASI] Mengubah gaya tombol Hapus --}}
+                                                <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Hapus</button>
                                             </form>
                                         </div>
                                     </td>
@@ -74,7 +72,6 @@
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    {{-- Sesuaikan colspan berdasarkan hak akses --}}
                                     <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '4' : '3' }}" class="px-6 py-4 text-center">
                                         Tidak ada data.
                                     </td>

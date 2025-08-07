@@ -16,6 +16,13 @@
                         </div>
                     @endif
 
+                    {{-- [BARU] Notifikasi Eror --}}
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <h3 class="font-semibold text-lg mb-4">Daftar Pengguna</h3>
 
                     <div class="overflow-x-auto">
@@ -30,7 +37,7 @@
                             </thead>
 
                             <tbody class="divide-y divide-gray-200">
-                                @foreach ($users as $user)
+                                @forelse ($users as $user)
                                     <tr>
                                         <td class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">{{ $user->name }}</td>
                                         <td class="whitespace-nowrap px-4 py-2 text-gray-700">{{ $user->email }}</td>
@@ -40,15 +47,25 @@
                                             </span>
                                         </td>
                                         <td class="whitespace-nowrap px-4 py-2">
-                                            {{-- Tombol Aksi Edit --}}
                                             <a href="{{ route('users.edit', $user) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">
                                                 Edit
                                             </a>
                                         </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="whitespace-nowrap px-4 py-4 text-center text-gray-500">
+                                            Tidak ada pengguna yang ditemukan.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    {{-- [BARU] Tambahkan blok ini untuk link paginasi --}}
+                    <div class="mt-4">
+                        {{ $users->links() }}
                     </div>
                 </div>
             </div>

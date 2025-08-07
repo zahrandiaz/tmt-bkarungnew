@@ -10,12 +10,23 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     
+                    {{-- [BARU] Tambahkan blok notifikasi --}}
+                    @if (session('success'))
+                        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded" role="alert">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     {{-- Form untuk mengedit peran --}}
                     <form method="POST" action="{{ route('roles.update', $role) }}">
                         @csrf
                         @method('PUT') {{-- Memberitahu Laravel ini adalah request UPDATE --}}
 
-                        <!-- Nama Peran -->
                         <div>
                             <x-input-label for="name" :value="__('Nama Peran')" />
                             {{-- Isi value dengan data peran yang sedang diedit --}}

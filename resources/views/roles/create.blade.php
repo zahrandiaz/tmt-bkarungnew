@@ -10,11 +10,22 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     
+                    {{-- [BARU] Tambahkan blok notifikasi --}}
+                    @if (session('success'))
+                        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded" role="alert">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     {{-- Form untuk menambah peran baru --}}
                     <form method="POST" action="{{ route('roles.store') }}">
                         @csrf
 
-                        <!-- Nama Peran -->
                         <div>
                             <x-input-label for="name" :value="__('Nama Peran')" />
                             <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus />
