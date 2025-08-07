@@ -4,6 +4,7 @@
             {{ __('Manajemen Jenis Produk') }}
         </h2>
     </x-slot>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -13,22 +14,32 @@
                             {{ session('success') }}
                         </div>
                     @endif
+
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-semibold text-lg">Daftar Jenis</h3>
+                        {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}
+                        @hasanyrole('Admin|Manager')
                         <a href="{{ route('product-types.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Tambah Jenis</a>
+                        @endhasanyrole
                     </div>
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
                             <thead class="text-left">
                                 <tr>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Nama Jenis</th>
+                                    {{-- Kolom Aksi hanya muncul untuk Admin dan Manager --}}
+                                    @hasanyrole('Admin|Manager')
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Aksi</th>
+                                    @endhasanyrole
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 @forelse ($types as $type)
                                     <tr>
                                         <td class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">{{ $type->name }}</td>
+                                        {{-- Tombol Edit & Hapus hanya muncul untuk Admin dan Manager --}}
+                                        @hasanyrole('Admin|Manager')
                                         <td class="whitespace-nowrap px-4 py-2 flex space-x-2">
                                             <a href="{{ route('product-types.edit', $type) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
                                             <form action="{{ route('product-types.destroy', $type) }}" method="POST" onsubmit="return confirm('Yakin hapus?');">
@@ -37,10 +48,12 @@
                                                 <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Hapus</button>
                                             </form>
                                         </td>
+                                        @endhasanyrole
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="2" class="whitespace-nowrap px-4 py-4 text-center text-gray-500">Tidak ada jenis produk.</td>
+                                        {{-- Sesuaikan colspan berdasarkan hak akses --}}
+                                        <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '2' : '1' }}" class="whitespace-nowrap px-4 py-4 text-center text-gray-500">Tidak ada jenis produk.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

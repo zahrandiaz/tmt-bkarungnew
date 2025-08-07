@@ -16,11 +16,14 @@
                         </div>
                     @endif
 
+                    {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}
+                    @hasanyrole('Admin|Manager')
                     <div class="mb-4">
                         <a href="{{ route('suppliers.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                             Tambah Supplier
                         </a>
                     </div>
+                    @endhasanyrole
 
                     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
@@ -29,7 +32,10 @@
                                     <th scope="col" class="px-6 py-3">Nama</th>
                                     <th scope="col" class="px-6 py-3">Telepon</th>
                                     <th scope="col" class="px-6 py-3">Alamat</th>
+                                    {{-- Kolom Aksi hanya muncul untuk Admin dan Manager --}}
+                                    @hasanyrole('Admin|Manager')
                                     <th scope="col" class="px-6 py-3">Aksi</th>
+                                    @endhasanyrole
                                 </tr>
                             </thead>
                             <tbody>
@@ -44,12 +50,12 @@
                                     <td class="px-6 py-4">
                                         {{ $supplier->address }}
                                     </td>
+                                    {{-- Tombol Edit & Hapus hanya muncul untuk Admin dan Manager --}}
+                                    @hasanyrole('Admin|Manager')
                                     <td class="px-6 py-4">
-                                        <!-- [MODIFIKASI] Wrapper untuk aksi -->
                                         <div class="flex space-x-2">
                                             <a href="{{ route('suppliers.edit', $supplier->id) }}" class="font-medium text-blue-600 hover:underline">Edit</a>
                                             
-                                            <!-- [BARU] Form untuk Hapus -->
                                             <form method="POST" action="{{ route('suppliers.destroy', $supplier->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus supplier ini?');">
                                                 @csrf
                                                 @method('DELETE')
@@ -57,10 +63,12 @@
                                             </form>
                                         </div>
                                     </td>
+                                    @endhasanyrole
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    <td colspan="4" class="px-6 py-4 text-center">
+                                    {{-- Sesuaikan colspan berdasarkan hak akses --}}
+                                    <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '4' : '3' }}" class="px-6 py-4 text-center">
                                         Tidak ada data.
                                     </td>
                                 </tr>
