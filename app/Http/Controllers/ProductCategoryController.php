@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProductCategory; // <-- 1. TAMBAHKAN INI
-use Illuminate\Http\Request;
+use App\Models\ProductCategory;
+// Hapus 'use Illuminate\Http\Request;'
+use App\Http\Requests\StoreProductCategoryRequest; // <-- [BARU]
+use App\Http\Requests\UpdateProductCategoryRequest; // <-- [BARU]
 
 class ProductCategoryController extends Controller
 {
     public function index()
     {
-        $categories = ProductCategory::all();
+        $categories = ProductCategory::paginate(10); // [MODIFIKASI] Tambahkan paginasi
         return view('product-categories.index', compact('categories'));
     }
 
@@ -18,10 +20,10 @@ class ProductCategoryController extends Controller
         return view('product-categories.create');
     }
 
-    public function store(Request $request)
+    // [MODIFIKASI] Gunakan StoreProductCategoryRequest
+    public function store(StoreProductCategoryRequest $request)
     {
-        $validated = $request->validate(['name' => 'required|string|unique:karung_product_categories,name|max:255']);
-        ProductCategory::create($validated);
+        ProductCategory::create($request->validated());
         return redirect()->route('product-categories.index')->with('success', 'Kategori produk berhasil ditambahkan.');
     }
 
@@ -30,16 +32,21 @@ class ProductCategoryController extends Controller
         return view('product-categories.edit', compact('productCategory'));
     }
 
-    public function update(Request $request, ProductCategory $productCategory)
+    // [MODIFIKASI] Gunakan UpdateProductCategoryRequest
+    public function update(UpdateProductCategoryRequest $request, ProductCategory $productCategory)
     {
-        $validated = $request->validate(['name' => 'required|string|unique:karung_product_categories,name,' . $productCategory->id . '|max:255']);
-        $productCategory->update($validated);
+        $productCategory->update($request->validated());
         return redirect()->route('product-categories.index')->with('success', 'Kategori produk berhasil diperbarui.');
     }
 
+    // [MODIFIKASI] Tambahkan validasi sebelum hapus
     public function destroy(ProductCategory $productCategory)
     {
-        // Tambahkan validasi di sini jika kategori tidak boleh dihapus jika sudah digunakan oleh produk
+        // Cek apakah ada produk yang masih menggunakan kategori ini
+        if ($productCategory->products()->exists()) {
+            return redirect()->route('product-categories.index')->with('error', 'Kategori tidak dapat dihapus karena masih digunakan oleh produk.');
+        }
+
         $productCategory->delete();
         return redirect()->route('product-categories.index')->with('success', 'Kategori produk berhasil dihapus.');
     }

@@ -16,6 +16,13 @@
                         </div>
                     @endif
 
+                    {{-- [BARU] Tambahkan blok ini untuk menampilkan pesan Eror --}}
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}
                     @hasanyrole('Admin|Manager')
                     <div class="mb-4">

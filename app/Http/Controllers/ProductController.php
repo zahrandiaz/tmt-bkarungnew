@@ -5,16 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductType;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    // index, create, and store methods remain the same...
-
     public function index()
     {
-        $products = Product::with(['category', 'type'])->get();
+        $products = Product::with(['category', 'type'])->paginate(10);
         return view('products.index', compact('products'));
     }
 
@@ -25,19 +25,9 @@ class ProductController extends Controller
         return view('products.create', compact('categories', 'types'));
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'product_category_id' => 'required|exists:karung_product_categories,id',
-            'product_type_id' => 'required|exists:karung_product_types,id',
-            'purchase_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'min_stock_level' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-        ]);
-
+        $validated = $request->validated();
         $validated['sku'] = 'SKU-' . strtoupper(Str::random(8));
         
         Product::create($validated);
@@ -45,9 +35,6 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Produk berhasil ditambahkan.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Product $product)
     {
         $categories = ProductCategory::all();
@@ -55,33 +42,22 @@ class ProductController extends Controller
         return view('products.edit', compact('product', 'categories', 'types'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Product $product)
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'product_category_id' => 'required|exists:karung_product_categories,id',
-            'product_type_id' => 'required|exists:karung_product_types,id',
-            'purchase_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'min_stock_level' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-        ]);
-
-        $product->update($validated);
+        $product->update($request->validated());
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Product $product)
     {
-        // Add validation here later if the product is part of a transaction
+        $inSale = DB::table('sale_details')->where('product_id', $product->id)->exists();
+        $inPurchase = DB::table('purchase_details')->where('product_id', $product->id)->exists();
+
+        if ($inSale || $inPurchase) {
+            return redirect()->route('products.index')->with('error', 'Produk tidak dapat dihapus karena sudah tercatat dalam transaksi.');
+        }
+
         $product->delete();
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');

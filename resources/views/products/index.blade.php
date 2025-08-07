@@ -7,15 +7,22 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
+                    {{-- Pesan Sukses --}}
                     @if (session('success'))
                         <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded" role="alert">
                             {{ session('success') }}
                         </div>
                     @endif
 
+                    {{-- [BARU] Tambahkan blok ini untuk menampilkan pesan Eror --}}
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-semibold text-lg">Daftar Produk</h3>
-                        {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}
                         @hasanyrole('Admin|Manager')
                         <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Tambah Produk</a>
                         @endhasanyrole
@@ -31,7 +38,6 @@
                                     <th class="p-2">Jenis</th>
                                     <th class="p-2">Harga Jual</th>
                                     <th class="p-2">Stok</th>
-                                    {{-- Kolom Aksi hanya muncul untuk Admin dan Manager --}}
                                     @hasanyrole('Admin|Manager')
                                     <th class="p-2">Aksi</th>
                                     @endhasanyrole
@@ -46,7 +52,6 @@
                                         <td class="p-2">{{ $product->type->name }}</td>
                                         <td class="p-2">Rp {{ number_format($product->selling_price, 0, ',', '.') }}</td>
                                         <td class="p-2">{{ $product->stock }}</td>
-                                        {{-- Tombol Edit & Hapus hanya muncul untuk Admin dan Manager --}}
                                         @hasanyrole('Admin|Manager')
                                         <td class="p-2 flex space-x-2">
                                             <a href="{{ route('products.edit', $product) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
@@ -60,7 +65,6 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        {{-- Sesuaikan colspan berdasarkan hak akses --}}
                                         <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '7' : '6' }}" class="p-4 text-center">Tidak ada produk.</td>
                                     </tr>
                                 @endforelse
