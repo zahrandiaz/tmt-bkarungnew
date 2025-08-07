@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role; // <-- 1. TAMBAHKAN INI
+// Hapus 'use Illuminate\Http\Request;' karena sudah tidak dipakai di store/update
+use Spatie\Permission\Models\Role;
+// [BARU] Tambahkan FormRequest yang kita buat
+use App\Http\Requests\StoreRoleRequest;
+use App\Http\Requests\UpdateRoleRequest;
 
 class RoleController extends Controller
 {
@@ -18,13 +21,11 @@ class RoleController extends Controller
         return view('roles.create');
     }
 
-    public function store(Request $request)
+    // [MODIFIKASI] Ganti Request dengan StoreRoleRequest
+    public function store(StoreRoleRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|unique:roles,name|max:255',
-        ]);
-
-        Role::create($validated);
+        // Validasi sudah terjadi secara otomatis sebelum masuk ke sini
+        Role::create($request->validated());
 
         return redirect()->route('roles.index')->with('success', 'Peran baru berhasil ditambahkan.');
     }
@@ -34,23 +35,17 @@ class RoleController extends Controller
         return view('roles.edit', compact('role'));
     }
 
-    public function update(Request $request, Role $role)
+    // [MODIFIKASI] Ganti Request dengan UpdateRoleRequest
+    public function update(UpdateRoleRequest $request, Role $role)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|unique:roles,name,' . $role->id . '|max:255',
-        ]);
-
-        $role->update($validated);
+        // Validasi juga sudah terjadi secara otomatis
+        $role->update($request->validated());
 
         return redirect()->route('roles.index')->with('success', 'Peran berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Role $role)
     {
-        // Prevent deleting core roles
         if (in_array($role->name, ['Admin', 'Manager', 'Staf'])) {
             return redirect()->route('roles.index')->with('error', 'Peran inti tidak dapat dihapus.');
         }

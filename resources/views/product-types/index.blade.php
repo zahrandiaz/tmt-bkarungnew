@@ -15,6 +15,13 @@
                         </div>
                     @endif
 
+                    {{-- [BARU] Tambahkan blok ini untuk menampilkan pesan Eror --}}
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-semibold text-lg">Daftar Jenis</h3>
                         {{-- Tombol ini hanya muncul untuk Admin dan Manager --}}

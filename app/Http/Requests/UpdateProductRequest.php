@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateProductRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'product_category_id' => 'required|exists:karung_product_categories,id',
+            'product_type_id' => 'required|exists:karung_product_types,id',
+            'purchase_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0|gte:purchase_price',
+            'stock' => 'required|integer|min:0',
+            'min_stock_level' => 'required|integer|min:0',
+            'description' => 'nullable|string',
+        ];
+    }
+}

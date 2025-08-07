@@ -3,58 +3,50 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role; // <-- 1. TAMBAHKAN INI
+use Spatie\Permission\Models\Role;
+// Hapus 'use Illuminate\Http\Request;'
+use App\Http\Requests\UpdateUserRequest; // <-- [BARU] Tambahkan FormRequest
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('roles')->get();
+        $users = User::with('roles')->paginate(10); // [MODIFIKASI] Tambahkan paginasi
         return view('users.index', compact('users'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(User $user)
     {
-        // 2. Ambil semua peran yang ada
         $roles = Role::all();
-        // 3. Tampilkan view dan kirim data user beserta roles
         return view('users.edit', compact('user', 'roles'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, User $user)
+    // [MODIFIKASI] Ganti Request dengan UpdateUserRequest
+    public function update(UpdateUserRequest $request, User $user)
     {
-        // 4. Validasi input
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|string|exists:roles,name' // Pastikan peran yang dipilih ada di tabel roles
-        ]);
+        // Validasi sudah terjadi secara otomatis
+        $validated = $request->validated();
 
-        // 5. Update nama dan email pengguna
         $user->update([
             'name' => $validated['name'],
             'email' => $validated['email'],
         ]);
 
-        // 6. Sinkronkan peran pengguna. Ini akan menghapus peran lama dan menerapkan yang baru.
         $user->syncRoles($validated['role']);
 
-        // 7. Redirect kembali ke halaman index dengan pesan sukses
         return redirect()->route('users.index')->with('success', 'Data pengguna berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    // [MODIFIKASI] Tambahkan logika hapus dengan pengamanan
+    public function destroy(User $user)
     {
-        //
+        // Jangan biarkan pengguna menghapus diri sendiri
+        if ($user->id === auth()->id()) {
+            return redirect()->route('users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', 'Pengguna berhasil dihapus.');
     }
 }
