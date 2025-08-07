@@ -14,7 +14,7 @@
                         </div>
                     @endif
 
-                    {{-- [BARU] Tambahkan blok ini untuk menampilkan pesan Eror --}}
+                    {{-- Pesan Eror --}}
                     @if (session('error'))
                         <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
                             {{ session('error') }}
@@ -70,6 +70,11 @@
                                 @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    {{-- [BARU] Tambahkan blok ini untuk link paginasi --}}
+                    <div class="mt-4">
+                        {{ $products->links() }}
                     </div>
                 </div>
             </div>
