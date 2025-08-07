@@ -2,6 +2,10 @@
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Detail Transaksi Pembelian') }} #{{ $purchase->id }}
+            {{-- [BARU] Tambahkan status jika dibatalkan --}}
+            @if ($purchase->trashed())
+                <span class="text-sm font-normal text-red-600">(Dibatalkan)</span>
+            @endif
         </h2>
     </x-slot>
 
@@ -16,21 +20,27 @@
                         </a>
                         
                         <div class="flex items-center space-x-2">
-                             <form method="POST" action="{{ route('purchases.cancel', $purchase->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-500 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                    Batalkan
-                                </button>
-                            </form>
+                            {{-- [MODIFIKASI] Tombol Batal hanya muncul jika transaksi BELUM dibatalkan --}}
+                            @if (!$purchase->trashed())
+                                <form method="POST" action="{{ route('purchases.cancel', $purchase->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-500 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                        Batalkan
+                                    </button>
+                                </form>
+                            @endif
 
-                            <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" onsubmit="return confirm('PERINGATAN: Aksi ini akan menghapus data secara permanen dan tidak dapat dibatalkan. Apakah Anda benar-benar yakin?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                    Hapus Permanen
-                                </button>
-                            </form>
+                            {{-- [MODIFIKASI] Tombol Hapus Permanen hanya untuk Admin --}}
+                            @role('Admin')
+                                <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" onsubmit="return confirm('PERINGATAN: Aksi ini akan menghapus data secara permanen dan tidak dapat dibatalkan. Apakah Anda benar-benar yakin?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                        Hapus Permanen
+                                    </button>
+                                </form>
+                            @endrole
                         </div>
                     </div>
 

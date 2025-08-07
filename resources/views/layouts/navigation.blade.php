@@ -16,7 +16,7 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    @role('Admin')
+                    @hasanyrole('Admin|Manager')
                     <!-- Dropdown Master Data -->
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
                         <x-dropdown align="left" width="48">
@@ -27,8 +27,10 @@
                                 </button>
                             </x-slot>
                             <x-slot name="content">
+                                @role('Admin')
                                 <x-dropdown-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-dropdown-link>
+                                @endrole
                                 <x-dropdown-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
@@ -37,7 +39,9 @@
                             </x-slot>
                         </x-dropdown>
                     </div>
+                    @endhasanyrole
 
+                    @hasanyrole('Admin|Manager|Staf')
                     <!-- Dropdown Transaksi -->
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
                         <x-dropdown align="left" width="48">
@@ -49,13 +53,15 @@
                             </x-slot>
                             <x-slot name="content">
                                 <x-dropdown-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-dropdown-link>
-                                <!-- [MODIFIKASI] Tambahkan link daftar penjualan dan ubah link tambah penjualan -->
                                 <x-dropdown-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
                     </div>
+                    @endhasanyrole
 
+                    @hasanyrole('Admin|Manager')
+                    <!-- Dropdown Laporan -->
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
                             <x-dropdown align="left" width="48">
                                 <x-slot name="trigger">
@@ -72,7 +78,7 @@
                                 </x-slot>
                             </x-dropdown>
                         </div>
-                    @endrole
+                    @endhasanyrole
                 </div>
             </div>
 
@@ -113,13 +119,15 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">{{ __('Dashboard') }}</x-responsive-nav-link>
         </div>
 
-        @role('Admin')
+        @hasanyrole('Admin|Manager')
         <!-- Responsive Master Data -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4"><div class="font-medium text-base text-gray-800">Master Data</div></div>
             <div class="mt-3 space-y-1">
+                @role('Admin')
                 <x-responsive-nav-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-responsive-nav-link>
+                @endrole
                 <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
@@ -127,17 +135,22 @@
                 <x-responsive-nav-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-responsive-nav-link>
             </div>
         </div>
+        @endhasanyrole
+
+        @hasanyrole('Admin|Manager|Staf')
         <!-- Responsive Transaksi -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4"><div class="font-medium text-base text-gray-800">Transaksi</div></div>
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-responsive-nav-link>
-                <!-- [MODIFIKASI] Tambahkan link daftar dan ubah link tambah -->
                 <x-responsive-nav-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-responsive-nav-link>
             </div>
         </div>
+        @endhasanyrole
 
+        @hasanyrole('Admin|Manager')
+        <!-- Responsive Laporan -->
         <div class="pt-4 pb-1 border-t border-gray-200">
                 <div class="px-4"><div class="font-medium text-base text-gray-800">Laporan</div></div>
                 <div class="mt-3 space-y-1">
@@ -147,7 +160,7 @@
                     <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
                 </div>
             </div>
-        @endrole
+        @endhasanyrole
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
