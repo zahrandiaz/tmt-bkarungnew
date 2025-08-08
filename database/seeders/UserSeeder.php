@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
         // Membuat Pengguna Staf
         $staf = User::create([
             'name' => 'Staf TMT',
-            'email' => 'staf@bagjakarung.com',
+            'email' => 'staf@tmt.com',
             'password' => Hash::make('staf'),
         ]);
         $staf->assignRole('Staf');
