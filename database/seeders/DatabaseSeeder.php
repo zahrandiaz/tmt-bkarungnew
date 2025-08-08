@@ -12,10 +12,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Memanggil seeder peran dan pengguna
+        // Memanggil semua seeder yang dibutuhkan
         $this->call([
+            // Seeder Inti
             RoleSeeder::class,
-            UserSeeder::class, // <-- TAMBAHKAN BARIS INI
+            UserSeeder::class, 
+            
+            // [BARU] Seeder Data Master
+            ProductCategorySeeder::class,
+            ProductTypeSeeder::class,
+            SupplierSeeder::class,
+            CustomerSeeder::class,
         ]);
     }
 }
