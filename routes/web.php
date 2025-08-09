@@ -34,7 +34,7 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('sales.destroy');
 
-    // [BARU] Pulihkan Transaksi (Restore)
+    // Pulihkan Transaksi (Restore)
     Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
     Route::post('sales/{id}/restore', [SaleController::class, 'restore'])->name('sales.restore');
 });
@@ -69,6 +69,9 @@ Route::middleware(['auth', 'role:Admin|Manager|Staf'])->group(function () {
     // Transaksi Penjualan (tanpa hard delete)
     Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
     Route::resource('sales', SaleController::class)->except(['destroy']);
+
+    // [BARU] API untuk pencarian produk
+    Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search');
 });
 
 

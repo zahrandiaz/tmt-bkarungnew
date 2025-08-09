@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Product; // <-- [BARU] Tambahkan ini
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule; // <-- [BARU] Tambahkan ini
+use Illuminate\Validation\Rule;
 
 class StoreSaleRequest extends FormRequest
 {
@@ -26,7 +26,8 @@ class StoreSaleRequest extends FormRequest
         return [
             // Validasi untuk data utama (header)
             'customer_id' => ['required', Rule::exists('customers', 'id')],
-            'sale_date' => 'required|date',
+            // [MODIFIKASI] Ubah aturan validasi tanggal
+            'sale_date' => 'required|date_format:Y-m-d\TH:i',
             'total_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
 
@@ -37,19 +38,13 @@ class StoreSaleRequest extends FormRequest
                 'required',
                 'integer',
                 'min:1',
-                // [MODIFIKASI] Tambahkan validasi stok kustom
                 function ($attribute, $value, $fail) {
-                    // $attribute akan menjadi 'items.0.quantity', 'items.1.quantity', dst.
-                    // Kita perlu mengambil product_id dari item yang sama.
-                    $index = explode('.', $attribute)[1]; // Ambil index array (0, 1, 2, ...)
+                    $index = explode('.', $attribute)[1];
                     $productId = $this->input('items.' . $index . '.product_id');
 
-                    // Jika product_id tidak ada atau tidak valid, aturan 'exists' lain akan menangkapnya.
-                    // Jadi kita hanya perlu melanjutkan jika product_id ada.
                     if ($productId) {
                         $product = Product::find($productId);
                         if ($product && $product->stock < $value) {
-                            // Jika stok tidak mencukupi, gagalkan validasi.
                             $fail("Stok untuk produk '{$product->name}' tidak mencukupi (sisa: {$product->stock}).");
                         }
                     }
