@@ -6,15 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes; // <-- [BARU] Tambahkan ini
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
-    // [BARU] Gunakan trait HasFactory dan SoftDeletes
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'invoice_number', // <-- [BARU] Tambahkan ini
         'customer_id',
+        'user_id',        // <-- [BARU] Tambahkan ini
         'sale_date',
         'total_amount',
         'notes',
@@ -26,6 +27,14 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * [BARU] Mendapatkan pengguna (staf) yang mencatat penjualan ini.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

@@ -32,6 +32,8 @@
                         <table class="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
                             <thead class="text-left">
                                 <tr>
+                                    {{-- [BARU] Tambahkan header untuk nomor urut --}}
+                                    <th class="p-2">No</th>
                                     <th class="p-2">SKU</th>
                                     <th class="p-2">Nama</th>
                                     <th class="p-2">Kategori</th>
@@ -46,6 +48,9 @@
                             <tbody class="divide-y divide-gray-200">
                                 @forelse ($products as $product)
                                     <tr>
+                                        {{-- [BARU] Tambahkan sel untuk nomor urut --}}
+                                        {{-- Rumus: (Halaman saat ini - 1) * Jumlah per halaman + iterasi loop --}}
+                                        <td class="p-2">{{ ($products->currentPage() - 1) * $products->perPage() + $loop->iteration }}</td>
                                         <td class="p-2">{{ $product->sku }}</td>
                                         <td class="p-2">{{ $product->name }}</td>
                                         <td class="p-2">{{ $product->category->name }}</td>
@@ -65,14 +70,14 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '7' : '6' }}" class="p-4 text-center">Tidak ada produk.</td>
+                                        {{-- [BARU] Sesuaikan colspan dengan jumlah kolom baru --}}
+                                        <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '8' : '7' }}" class="p-4 text-center">Tidak ada produk.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
 
-                    {{-- [BARU] Tambahkan blok ini untuk link paginasi --}}
                     <div class="mt-4">
                         {{ $products->links() }}
                     </div>

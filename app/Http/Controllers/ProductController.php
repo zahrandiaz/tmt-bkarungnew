@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 
 class ProductController extends Controller
 {
@@ -29,6 +31,16 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
         $validated['sku'] = 'SKU-' . strtoupper(Str::random(8));
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $fileName = time() . '_' . Str::random(10) . '.webp';
+
+            $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+            Storage::disk('public')->put('products/' . $fileName, (string) $imageCompressed);
+            
+            $validated['image_path'] = 'products/' . $fileName;
+        }
         
         Product::create($validated);
 
@@ -44,13 +56,37 @@ class ProductController extends Controller
 
     public function update(UpdateProductRequest $request, Product $product)
     {
-        $product->update($request->validated());
+        $validated = $request->validated();
+
+        // [BARU] Logika untuk memperbarui gambar
+        if ($request->hasFile('image')) {
+            // 1. Hapus gambar lama jika ada
+            if ($product->image_path) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+
+            // 2. Simpan gambar baru
+            $image = $request->file('image');
+            $fileName = time() . '_' . Str::random(10) . '.webp';
+            $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+            Storage::disk('public')->put('products/' . $fileName, (string) $imageCompressed);
+
+            // 3. Tambahkan path gambar baru ke data yang akan diupdate
+            $validated['image_path'] = 'products/' . $fileName;
+        }
+
+        $product->update($validated);
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy(Product $product)
     {
+        // [BARU] Hapus gambar dari storage saat produk dihapus
+        if ($product->image_path) {
+            Storage::disk('public')->delete($product->image_path);
+        }
+        
         $inSale = DB::table('sale_details')->where('product_id', $product->id)->exists();
         $inPurchase = DB::table('purchase_details')->where('product_id', $product->id)->exists();
 
