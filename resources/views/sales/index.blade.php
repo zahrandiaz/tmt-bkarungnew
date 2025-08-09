@@ -21,46 +21,72 @@
                         </div>
                     @endif
 
-                    <div class="mb-4">
-                        <a href="{{ route('sales.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                            Tambah Penjualan Baru
+                    <div class="flex justify-between items-center mb-4">
+                        <a href="{{ route('sales.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                            Tambah Penjualan
                         </a>
                     </div>
+                    
+                    <div class="mb-4 border-b border-gray-200">
+                        <nav class="flex -mb-px space-x-4" aria-label="Tabs">
+                             <a href="{{ route('sales.index', ['status' => 'selesai']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status', 'selesai') == 'selesai' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                Selesai
+                            </a>
+                            <a href="{{ route('sales.index', ['status' => 'semua']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'semua' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                Semua
+                            </a>
+                            <a href="{{ route('sales.index', ['status' => 'dibatalkan']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'dibatalkan' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                Dibatalkan
+                            </a>
+                        </nav>
+                    </div>
 
+                    {{-- [MODIFIKASI] Tabel Baru --}}
                     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
+                                    <th scope="col" class="px-6 py-3">No</th>
+                                    <th scope="col" class="px-6 py-3">No. Invoice</th>
                                     <th scope="col" class="px-6 py-3">Tanggal</th>
                                     <th scope="col" class="px-6 py-3">Pelanggan</th>
-                                    <th scope="col" class="px-6 py-3">Total Penjualan</th>
-                                    <th scope="col" class="px-6 py-3">Catatan</th>
-                                    <th scope="col" class="px-6 py-3"><span class="sr-only">Aksi</span></th>
+                                    <th scope="col" class="px-6 py-3">Total</th>
+                                    <th scope="col" class="px-6 py-3">Status</th>
+                                    <th scope="col" class="px-6 py-3">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($sales as $sale)
-                                <tr class="bg-white border-b hover:bg-gray-50">
+                                <tr class="bg-white border-b hover:bg-gray-50 {{ $sale->trashed() ? 'bg-red-50' : '' }}">
+                                    <td class="px-6 py-4">{{ ($sales->currentPage() - 1) * $sales->perPage() + $loop->iteration }}</td>
+                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ $sale->invoice_number }}</th>
+                                    <td class="px-6 py-4">{{ \Carbon\Carbon::parse($sale->sale_date)->isoFormat('D MMM YYYY, HH:mm') }}</td>
+                                    <td class="px-6 py-4">{{ $sale->customer->name }}</td>
+                                    <td class="px-6 py-4">{{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}</td>
                                     <td class="px-6 py-4">
-                                        {{ \Carbon\Carbon::parse($sale->sale_date)->isoFormat('D MMMM YYYY') }}
+                                        @if ($sale->trashed())
+                                            <span class="px-2 py-1 font-semibold leading-tight text-red-700 bg-red-100 rounded-full">Dibatalkan</span>
+                                        @else
+                                            <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Selesai</span>
+                                        @endif
                                     </td>
-                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                        {{ $sale->customer->name }}
-                                    </th>
-                                    <td class="px-6 py-4">
-                                        {{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        {{ $sale->notes ?? '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-right">
-                                        <a href="{{ route('sales.show', $sale->id) }}" class="font-medium text-blue-600 hover:underline">Detail</a>
+                                    <td class="px-6 py-4 text-left flex items-center space-x-2">
+                                        @if ($sale->trashed())
+                                            @role('Admin')
+                                                <form action="{{ route('sales.restore', $sale->id) }}" method="POST" onsubmit="return confirm('Anda yakin ingin memulihkan transaksi ini?')">
+                                                    @csrf
+                                                    <button type="submit" class="font-medium text-green-600 hover:underline">Pulihkan</button>
+                                                </form>
+                                            @endrole
+                                        @else
+                                            <a href="{{ route('sales.show', $sale->id) }}" class="font-medium text-blue-600 hover:underline">Detail</a>
+                                        @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    <td colspan="5" class="px-6 py-4 text-center">
-                                        Belum ada data transaksi penjualan.
+                                    <td colspan="7" class="px-6 py-4 text-center">
+                                        Belum ada data transaksi penjualan pada tab ini.
                                     </td>
                                 </tr>
                                 @endforelse
@@ -69,7 +95,7 @@
                     </div>
 
                     <div class="mt-4">
-                        {{ $sales->links() }}
+                        {{ $sales->appends(request()->query())->links() }}
                     </div>
 
                 </div>

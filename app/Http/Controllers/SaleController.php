@@ -14,9 +14,22 @@ class SaleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $sales = Sale::with('customer')->latest()->paginate(10);
+        $status = $request->query('status');
+        
+        $query = Sale::query();
+
+        if ($status == 'dibatalkan') {
+            $query->onlyTrashed();
+        } elseif ($status == 'semua') {
+            $query->withTrashed();
+        } else {
+            // Kasus default (jika status adalah 'selesai' atau null) akan menampilkan yang tidak di-soft-delete
+        }
+
+        $sales = $query->with('customer')->latest()->paginate(10);
+        
         return view('sales.index', compact('sales'));
     }
 
@@ -46,9 +59,15 @@ class SaleController extends Controller
         $validatedData = $request->validated();
 
         try {
-            DB::transaction(function () use ($validatedData) {
+            DB::transaction(function () use ($validatedData, $request) { 
+                // [MODIFIKASI] Format Invoice Lebih Baik
+                $latestSaleId = Sale::withTrashed()->latest('id')->first()?->id ?? 0;
+                $invoiceNumber = 'INV/' . now()->format('Ym') . '/' . str_pad($latestSaleId + 1, 5, '0', STR_PAD_LEFT);
+
                 $sale = Sale::create([
+                    'invoice_number' => $invoiceNumber, 
                     'customer_id' => $validatedData['customer_id'],
+                    'user_id' => $request->user()->id, 
                     'sale_date' => $validatedData['sale_date'],
                     'total_amount' => $validatedData['total_amount'],
                     'notes' => $validatedData['notes'],
@@ -63,7 +82,7 @@ class SaleController extends Controller
                 }
             });
 
-            return redirect()->route('sales.index')->with('success', 'Transaksi penjualan berhasil disimpan.');
+            return redirect()->route('sales.index', ['status' => 'selesai'])->with('success', 'Transaksi penjualan berhasil disimpan.');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
@@ -81,13 +100,24 @@ class SaleController extends Controller
     }
     
     /**
-     * [BARU] Method untuk membatalkan (soft delete) transaksi.
+     * Method untuk membatalkan (soft delete) transaksi.
      */
     public function cancel(Sale $sale)
     {
-        $sale->delete(); // Ini akan menjalankan soft delete
+        $sale->delete(); 
+        
+        return redirect()->route('sales.index', ['status' => 'selesai'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dibatalkan.");
+    }
 
-        return redirect()->route('sales.index')->with('success', "Transaksi #{$sale->id} berhasil dibatalkan.");
+    /**
+     * Pulihkan transaksi yang di-soft-delete.
+     */
+    public function restore($id)
+    {
+        $sale = Sale::onlyTrashed()->findOrFail($id);
+        $sale->restore();
+
+        return redirect()->route('sales.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dipulihkan.");
     }
     
     /**
@@ -95,9 +125,8 @@ class SaleController extends Controller
      */
     public function destroy(Sale $sale)
     {
-        // Gunakan forceDelete() untuk menghapus permanen
         $sale->forceDelete();
 
-        return redirect()->route('sales.index')->with('success', "Transaksi #{$sale->id} berhasil dihapus permanen.");
+        return redirect()->route('sales.index')->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dihapus permanen.");
     }
 }
