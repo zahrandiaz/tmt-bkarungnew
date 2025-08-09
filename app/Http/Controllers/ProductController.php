@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductType;
+use Illuminate\Http\Request; // <-- [BARU] Tambahkan ini
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -58,20 +59,16 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
 
-        // [BARU] Logika untuk memperbarui gambar
         if ($request->hasFile('image')) {
-            // 1. Hapus gambar lama jika ada
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
             }
 
-            // 2. Simpan gambar baru
             $image = $request->file('image');
             $fileName = time() . '_' . Str::random(10) . '.webp';
             $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
             Storage::disk('public')->put('products/' . $fileName, (string) $imageCompressed);
 
-            // 3. Tambahkan path gambar baru ke data yang akan diupdate
             $validated['image_path'] = 'products/' . $fileName;
         }
 
@@ -82,7 +79,6 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        // [BARU] Hapus gambar dari storage saat produk dihapus
         if ($product->image_path) {
             Storage::disk('public')->delete($product->image_path);
         }
@@ -97,5 +93,24 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');
+    }
+
+    /**
+     * [BARU] Method untuk mencari produk via API.
+     */
+    public function search(Request $request)
+    {
+        $searchTerm = $request->query('q', '');
+
+        $products = Product::where('is_active', true)
+            ->where(function ($query) use ($searchTerm) {
+                $query->where('name', 'like', "%{$searchTerm}%")
+                      ->orWhere('sku', 'like', "%{$searchTerm}%");
+            })
+            ->select('id', 'name', 'selling_price', 'stock') // Pilih kolom yang relevan
+            ->limit(20) // Batasi hasil untuk performa
+            ->get();
+
+        return response()->json($products);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePurchaseRequest extends FormRequest
 {
@@ -11,7 +12,6 @@ class StorePurchaseRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Otorisasi sudah ditangani oleh middleware, jadi kita izinkan.
         return true;
     }
 
@@ -25,9 +25,13 @@ class StorePurchaseRequest extends FormRequest
         return [
             // Validasi untuk data utama (header)
             'supplier_id' => 'required|exists:suppliers,id',
-            'purchase_date' => 'required|date',
+            // [MODIFIKASI] Ubah aturan validasi tanggal
+            'purchase_date' => 'required|date_format:Y-m-d\TH:i',
             'total_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:255',
+            'invoice_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+
 
             // Validasi untuk detail item (array)
             'items' => 'required|array|min:1',
