@@ -6,7 +6,8 @@
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <form method="POST" action="{{ route('products.update', $product) }}">
+                    {{-- [BARU] Tambahkan enctype untuk upload file --}}
+                    <form method="POST" action="{{ route('products.update', $product) }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -44,13 +45,29 @@
                                 <x-text-input id="purchase_price" class="block mt-1 w-full" type="number" name="purchase_price" :value="old('purchase_price', $product->purchase_price)" required />
                             </div>
                             <div>
-                                <x-input-label for="stock" value="Stok Awal" />
+                                <x-input-label for="stock" value="Stok" />
                                 <x-text-input id="stock" class="block mt-1 w-full" type="number" name="stock" :value="old('stock', $product->stock)" required />
                             </div>
                             <div>
                                 <x-input-label for="min_stock_level" value="Stok Minimum" />
                                 <x-text-input id="min_stock_level" class="block mt-1 w-full" type="number" name="min_stock_level" :value="old('min_stock_level', $product->min_stock_level)" required />
                             </div>
+
+                            {{-- [BARU] Input untuk gambar produk dengan preview --}}
+                            <div>
+                                <x-input-label for="image" value="Ganti Gambar Produk (Opsional)" />
+                                <input type="file" name="image" id="image" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none mt-1">
+                                <p class="mt-1 text-sm text-gray-500">Kosongkan jika tidak ingin mengganti gambar.</p>
+                                <x-input-error :messages="$errors->get('image')" class="mt-2" />
+
+                                @if ($product->image_path)
+                                    <div class="mt-4">
+                                        <p class="text-sm font-medium text-gray-700">Gambar Saat Ini:</p>
+                                        <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="mt-2 w-32 h-32 object-cover rounded-md">
+                                    </div>
+                                @endif
+                            </div>
+
                             <div class="md:col-span-2">
                                 <x-input-label for="description" value="Deskripsi" />
                                 <textarea name="description" id="description" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm">{{ old('description', $product->description) }}</textarea>
