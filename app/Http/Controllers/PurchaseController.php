@@ -12,16 +12,29 @@ use Illuminate\Support\Facades\DB;
 class PurchaseController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar sumber daya.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $purchases = Purchase::with('supplier')->latest()->paginate(10);
+        $status = $request->query('status');
+        
+        $query = Purchase::query();
+
+        if ($status == 'dibatalkan') {
+            $query->onlyTrashed();
+        } elseif ($status == 'semua') {
+            $query->withTrashed();
+        } else {
+            // Kasus default ('selesai' atau null) akan menampilkan yang tidak di-soft-delete
+        }
+
+        $purchases = $query->with('supplier')->latest()->paginate(10);
+        
         return view('purchases.index', compact('purchases'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Menampilkan form untuk membuat sumber daya baru.
      */
     public function create()
     {
@@ -31,16 +44,23 @@ class PurchaseController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan sumber daya yang baru dibuat.
      */
     public function store(StorePurchaseRequest $request)
     {
         $validatedData = $request->validated();
 
         try {
-            DB::transaction(function () use ($validatedData) {
+            DB::transaction(function () use ($validatedData, $request) {
+                // [MODIFIKASI] Format Kode Pembelian Lebih Baik
+                $latestPurchaseId = Purchase::withTrashed()->latest('id')->first()?->id ?? 0;
+                $purchaseCode = 'PUR/' . now()->format('Ym') . '/' . str_pad($latestPurchaseId + 1, 5, '0', STR_PAD_LEFT);
+
                 $purchase = Purchase::create([
+                    'purchase_code' => $purchaseCode,
+                    'reference_number' => $validatedData['reference_number'] ?? null,
                     'supplier_id' => $validatedData['supplier_id'],
+                    'user_id' => $request->user()->id,
                     'purchase_date' => $validatedData['purchase_date'],
                     'total_amount' => $validatedData['total_amount'],
                     'notes' => $validatedData['notes'],
@@ -55,7 +75,7 @@ class PurchaseController extends Controller
                 }
             });
 
-            return redirect()->route('purchases.index')->with('success', 'Transaksi pembelian berhasil disimpan.');
+            return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', 'Transaksi pembelian berhasil disimpan.');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
@@ -64,7 +84,7 @@ class PurchaseController extends Controller
 
 
     /**
-     * Display the specified resource.
+     * Menampilkan sumber daya yang spesifik.
      */
     public function show(Purchase $purchase)
     {
@@ -77,20 +97,29 @@ class PurchaseController extends Controller
      */
     public function cancel(Purchase $purchase)
     {
-        $purchase->delete(); // Ini akan menjalankan soft delete
+        $purchase->delete();
 
-        return redirect()->route('purchases.index')->with('success', "Transaksi #{$purchase->id} berhasil dibatalkan.");
+        return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dibatalkan.");
+    }
+
+    /**
+     * Pulihkan transaksi yang di-soft-delete.
+     */
+    public function restore($id)
+    {
+        $purchase = Purchase::onlyTrashed()->findOrFail($id);
+        $purchase->restore();
+
+        return redirect()->route('purchases.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dipulihkan.");
     }
     
     /**
-     * Remove the specified resource from storage.
+     * Menghapus sumber daya secara permanen.
      */
-    // [MODIFIKASI] Implementasi Hard Delete
     public function destroy(Purchase $purchase)
     {
-        // Gunakan forceDelete() untuk menghapus permanen
         $purchase->forceDelete();
 
-        return redirect()->route('purchases.index')->with('success', "Transaksi #{$purchase->id} berhasil dihapus permanen.");
+        return redirect()->route('purchases.index')->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dihapus permanen.");
     }
 }

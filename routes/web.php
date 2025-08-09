@@ -33,6 +33,10 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     // Hapus Permanen Transaksi (Hard Delete)
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('sales.destroy');
+
+    // [BARU] Pulihkan Transaksi (Restore)
+    Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
+    Route::post('sales/{id}/restore', [SaleController::class, 'restore'])->name('sales.restore');
 });
 
 // Rute untuk ADMIN dan MANAGER
