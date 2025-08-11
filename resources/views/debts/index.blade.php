@@ -9,7 +9,24 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Daftar Utang (Pembelian Belum Lunas)</h3>
+                    
+                    {{-- [BARU] Navigasi Tab --}}
+                    <div class="mb-4 border-b border-gray-200">
+                        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+                            <li class="me-2">
+                                <a href="{{ route('debts.index', ['status' => 'belum lunas']) }}" 
+                                   class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status', 'belum lunas') == 'belum lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                   Belum Lunas
+                                </a>
+                            </li>
+                            <li class="me-2">
+                                <a href="{{ route('debts.index', ['status' => 'lunas']) }}" 
+                                   class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status') == 'lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                   Lunas
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
                     @if (session('success'))
                         <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded" role="alert">
@@ -27,7 +44,10 @@
                                     <th scope="col" class="px-6 py-3">Tanggal Pembelian</th>
                                     <th scope="col" class="px-6 py-3 text-right">Total Tagihan</th>
                                     <th scope="col" class="px-6 py-3 text-right">Sudah Dibayar</th>
+                                    {{-- [UBAH] Tampilkan Sisa Tagihan hanya jika status belum lunas --}}
+                                    @if(request('status', 'belum lunas') == 'belum lunas')
                                     <th scope="col" class="px-6 py-3 text-right">Sisa Tagihan</th>
+                                    @endif
                                     <th scope="col" class="px-6 py-3">
                                         <span class="sr-only">Aksi</span>
                                     </th>
@@ -44,17 +64,20 @@
                                         <td class="px-6 py-4">{{ \Carbon\Carbon::parse($purchase->purchase_date)->format('d-m-Y H:i') }}</td>
                                         <td class="px-6 py-4 text-right">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
                                         <td class="px-6 py-4 text-right">Rp {{ number_format($purchase->total_paid, 0, ',', '.') }}</td>
+                                        {{-- [UBAH] Tampilkan Sisa Tagihan hanya jika status belum lunas --}}
+                                        @if(request('status', 'belum lunas') == 'belum lunas')
                                         <td class="px-6 py-4 text-right font-bold text-red-600">
                                             Rp {{ number_format($purchase->total_amount - $purchase->total_paid, 0, ',', '.') }}
                                         </td>
+                                        @endif
                                         <td class="px-6 py-4 text-right">
-                                            <a href="{{ route('purchases.show', $purchase->id) }}" class="font-medium text-blue-600 hover:underline">Kelola</a>
+                                            <a href="{{ route('debts.manage', $purchase->id) }}" class="font-medium text-blue-600 hover:underline">Kelola</a>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
                                         <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                            Tidak ada data utang.
+                                            Tidak ada data utang untuk status ini.
                                         </td>
                                     </tr>
                                 @endforelse
