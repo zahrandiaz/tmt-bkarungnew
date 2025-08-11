@@ -1,6 +1,10 @@
 export default () => ({
-    items: window.oldItems || [{ id: Date.now(), product_id: '', quantity: 1, purchase_price: 0, subtotal: 0, product_data: null }],
-    total_amount: window.oldTotalAmount || 0,
+    // [DIUBAH] Mengambil semua data awal dari window.oldData
+    items: window.oldData?.items || [{ id: Date.now(), product_id: '', quantity: 1, purchase_price: 0, subtotal: 0, product_data: null }],
+    total_amount: window.oldData?.total_amount || 0,
+    payment_method: window.oldData?.payment_method || 'tunai',
+    payment_status: window.oldData?.payment_status || 'lunas',
+    down_payment: window.oldData?.down_payment || 0,
     
     gallery: {
         isOpen: false,

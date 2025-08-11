@@ -22,6 +22,7 @@
 
                     <form method="POST" action="{{ route('purchases.store') }}" enctype="multipart/form-data">
                         @csrf
+                        {{-- Bagian Informasi Utama --}}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <x-input-label for="supplier_id" :value="__('Supplier')" />
@@ -48,6 +49,31 @@
                             </div>
                         </div>
 
+                        <div class="border-t border-b border-gray-200 py-6 my-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Pembayaran</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div>
+                                    <x-input-label for="payment_method" :value="__('Metode Pembayaran')" />
+                                    <select id="payment_method" name="payment_method" x-model="payment_method" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <option value="tunai">Tunai</option>
+                                        <option value="transfer">Transfer Bank</option>
+                                        <option value="lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <x-input-label for="payment_status" :value="__('Status Pembayaran')" />
+                                    <select id="payment_status" name="payment_status" x-model="payment_status" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <option value="lunas">Lunas</option>
+                                        <option value="belum lunas">Belum Lunas</option>
+                                    </select>
+                                </div>
+                                <div x-show="payment_status === 'belum lunas'" style="display: none;">
+                                    <x-input-label for="down_payment" :value="__('Uang Muka (DP)')" />
+                                    <x-text-input id="down_payment" x-model.number="down_payment" class="block mt-1 w-full" type="number" name="down_payment" min="0" />
+                                </div>
+                            </div>
+                        </div>
+                        {{-- Bagian Detail Produk --}}
                         <div>
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-lg font-medium text-gray-900">Detail Produk</h3>
@@ -141,8 +167,14 @@
 
     @push('scripts')
     <script>
-        window.oldItems = @json(old('items'));
-        window.oldTotalAmount = @json(old('total_amount'));
+        // [DIUBAH] Mengirim data 'old' dari PHP ke JavaScript
+        window.oldData = {
+            items: @json(old('items')),
+            total_amount: @json(old('total_amount')),
+            payment_method: @json(old('payment_method', 'tunai')),
+            payment_status: @json(old('payment_status', 'lunas')),
+            down_payment: @json(old('down_payment', 0)),
+        };
     </script>
     @endpush
 </x-app-layout>

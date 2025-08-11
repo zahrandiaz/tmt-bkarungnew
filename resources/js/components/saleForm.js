@@ -1,8 +1,12 @@
 export default () => ({
-    items: window.oldItems || [{ id: Date.now(), product_id: '', quantity: 1, sale_price: 0, subtotal: 0, product_data: null }],
-    total_amount: window.oldTotalAmount || 0,
+    // [DIUBAH] Mengambil semua data awal dari window.oldData
+    items: window.oldData?.items || [{ id: Date.now(), product_id: '', quantity: 1, sale_price: 0, subtotal: 0, product_data: null }],
+    total_amount: window.oldData?.total_amount || 0,
+    payment_method: window.oldData?.payment_method || 'tunai',
+    payment_status: window.oldData?.payment_status || 'lunas',
+    down_payment: window.oldData?.down_payment || 0,
     
-    // [KEMBALIKAN] Properti untuk galeri
+    // Properti untuk galeri
     gallery: {
         isOpen: false,
         products: [],
@@ -33,7 +37,7 @@ export default () => ({
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
     },
 
-    // [KEMBALIKAN] Fungsi-fungsi untuk galeri
+    // Fungsi-fungsi untuk galeri
     toggleGallery() {
         this.gallery.isOpen = !this.gallery.isOpen;
         if (this.gallery.isOpen && this.gallery.products.length === 0) {

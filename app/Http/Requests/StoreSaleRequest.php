@@ -26,10 +26,14 @@ class StoreSaleRequest extends FormRequest
         return [
             // Validasi untuk data utama (header)
             'customer_id' => ['required', Rule::exists('customers', 'id')],
-            // [MODIFIKASI] Ubah aturan validasi tanggal
             'sale_date' => 'required|date_format:Y-m-d\TH:i',
             'total_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
+
+            // [BARU] Validasi untuk detail pembayaran
+            'payment_method' => ['required', Rule::in(['tunai', 'transfer', 'lainnya'])],
+            'payment_status' => ['required', Rule::in(['lunas', 'belum lunas'])],
+            'down_payment' => ['nullable', 'numeric', 'min:0', 'required_if:payment_status,belum lunas'],
 
             // Validasi untuk detail item (array)
             'items' => 'required|array|min:1',

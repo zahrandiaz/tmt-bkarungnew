@@ -13,12 +13,16 @@ class Sale extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'invoice_number', // <-- [BARU] Tambahkan ini
+        'invoice_number',
         'customer_id',
-        'user_id',        // <-- [BARU] Tambahkan ini
         'sale_date',
         'total_amount',
+        'payment_method',   // DITAMBAHKAN
+        'payment_status',   // DITAMBAHKAN
+        'down_payment',     // DITAMBAHKAN
+        'total_paid',       // DITAMBAHKAN
         'notes',
+        'user_id',
     ];
 
     /**

@@ -13,14 +13,18 @@ class Purchase extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'purchase_code',      // <-- [BARU] Tambahkan ini
-        'reference_number',   // <-- [BARU] Tambahkan ini
+        'purchase_code',
         'supplier_id',
-        'user_id',            // <-- [BARU] Tambahkan ini
         'purchase_date',
         'total_amount',
+        'payment_method',     // DITAMBAHKAN
+        'payment_status',     // DITAMBAHKAN
+        'down_payment',       // DITAMBAHKAN
+        'total_paid',         // DITAMBAHKAN
+        'reference_number',
+        'invoice_image_path',
         'notes',
-        'invoice_image_path', // <-- [BARU] Tambahkan ini
+        'user_id',
     ];
 
     /**
