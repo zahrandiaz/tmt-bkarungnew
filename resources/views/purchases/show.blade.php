@@ -1,11 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Detail Transaksi Pembelian') }} #{{ $purchase->id }}
-            {{-- [BARU] Tambahkan status jika dibatalkan --}}
-            @if ($purchase->trashed())
-                <span class="text-sm font-normal text-red-600">(Dibatalkan)</span>
-            @endif
+            {{-- [MODIFIKASI] Gunakan purchase_code --}}
+            Detail Transaksi Pembelian #{{ $purchase->purchase_code }}
         </h2>
     </x-slot>
 
@@ -14,44 +11,60 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
 
-                    <div class="flex justify-between items-center mb-6">
-                        <a href="{{ route('purchases.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300">
-                            &larr; Kembali ke Daftar
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                        <a href="{{ url()->previous() }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300 mb-3 md:mb-0">
+                            &larr; Kembali
                         </a>
                         
                         <div class="flex items-center space-x-2">
-                            {{-- [MODIFIKASI] Tombol Batal hanya muncul jika transaksi BELUM dibatalkan --}}
                             @if (!$purchase->trashed())
-                                <form method="POST" action="{{ route('purchases.cancel', $purchase->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini?');">
+                                <form method="POST" action="{{ route('purchases.cancel', $purchase->id) }}" onsubmit="return confirm('Yakin ingin membatalkan transaksi ini?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-500 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        Batalkan
-                                    </button>
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-500">Batalkan</button>
                                 </form>
                             @endif
-
-                            {{-- [MODIFIKASI] Tombol Hapus Permanen hanya untuk Admin --}}
                             @role('Admin')
-                                <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" onsubmit="return confirm('PERINGATAN: Aksi ini akan menghapus data secara permanen dan tidak dapat dibatalkan. Apakah Anda benar-benar yakin?');">
+                                <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" onsubmit="return confirm('PERINGATAN: Aksi ini akan menghapus data permanen. Yakin?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        Hapus Permanen
-                                    </button>
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">Hapus Permanen</button>
                                 </form>
                             @endrole
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 border-b pb-6">
+                    {{-- [BARU] Informasi Detail Transaksi --}}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 border-b pb-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Kode Pembelian</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->purchase_code }}</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Status Transaksi</h3>
+                            <p class="mt-1 text-lg font-semibold">
+                                @if ($purchase->trashed())
+                                    <span class="text-red-600">Dibatalkan</span>
+                                @else
+                                    <span class="text-green-600">Selesai</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Tanggal & Waktu</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ \Carbon\Carbon::parse($purchase->purchase_date)->isoFormat('D MMM YYYY, HH:mm') }}</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Dicatat Oleh</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->user->name ?? 'N/A' }}</p>
+                        </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Supplier</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->supplier->name }}</p>
                         </div>
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500">Tanggal Pembelian</h3>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ \Carbon\Carbon::parse($purchase->purchase_date)->isoFormat('D MMMM YYYY') }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">No. Referensi</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->reference_number ?? '-' }}</p>
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Total Pembelian</h3>
@@ -59,9 +72,22 @@
                         </div>
                     </div>
 
-                    <div class="mb-6">
-                         <h3 class="text-sm font-medium text-gray-500">Catatan</h3>
-                         <p class="mt-1 text-gray-700">{{ $purchase->notes ?? 'Tidak ada catatan.' }}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Catatan</h3>
+                            <p class="mt-1 text-gray-700">{{ $purchase->notes ?? 'Tidak ada catatan.' }}</p>
+                        </div>
+                        {{-- [BARU] Tampilkan Gambar Faktur --}}
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Gambar Faktur</h3>
+                            @if($purchase->invoice_image_path)
+                                <a href="{{ asset('storage/' . $purchase->invoice_image_path) }}" target="_blank">
+                                    <img src="{{ asset('storage/' . $purchase->invoice_image_path) }}" alt="Gambar Faktur" class="mt-2 w-full max-w-xs h-auto object-cover rounded-md border">
+                                </a>
+                            @else
+                                <p class="mt-1 text-gray-700">Tidak ada gambar faktur.</p>
+                            @endif
+                        </div>
                     </div>
 
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Rincian Produk</h3>

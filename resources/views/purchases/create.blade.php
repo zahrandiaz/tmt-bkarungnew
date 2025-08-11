@@ -8,7 +8,10 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+                <div class="p-6 text-gray-900" 
+                     x-data="purchaseForm" 
+                     x-init="init()"
+                     @remove-item.window="items.splice($event.detail.index, 1); calculateTotal()">
 
                     @if ($errors->any())
                         <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
@@ -17,12 +20,11 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('purchases.store') }}" x-data="purchaseForm" x-init="init()" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('purchases.store') }}" enctype="multipart/form-data">
                         @csrf
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <x-input-label for="supplier_id" :value="__('Supplier')" />
-                                {{-- [MODIFIKASI] Tambahkan logika untuk default supplier --}}
                                 <select id="supplier_id" name="supplier_id" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm" required>
                                     <option value="" disabled {{ !old('supplier_id') ? 'selected' : '' }}>Pilih Supplier</option>
                                     @foreach($suppliers as $supplier)
@@ -36,7 +38,7 @@
                                 <x-input-label for="purchase_date" :value="__('Tanggal Pembelian')" />
                                 <x-text-input id="purchase_date" class="block mt-1 w-full" type="datetime-local" name="purchase_date" :value="old('purchase_date', now()->format('Y-m-d\TH:i'))" required />
                             </div>
-                            <div>
+                             <div>
                                 <x-input-label for="reference_number" :value="__('No. Referensi/Faktur (Opsional)')" />
                                 <x-text-input id="reference_number" class="block mt-1 w-full" type="text" name="reference_number" :value="old('reference_number')" />
                             </div>
@@ -47,7 +49,12 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Produk</h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">Detail Produk</h3>
+                                <button type="button" @click="toggleGallery()" class="text-sm font-medium text-indigo-600 hover:underline">
+                                    Pilih dari Galeri
+                                </button>
+                            </div>
                             <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                                 <table class="w-full text-sm text-left text-gray-500">
                                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -60,19 +67,20 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <template x-for="(item, index) in items" :key="index">
-                                            <tr class="bg-white border-b hover:bg-gray-50">
+                                        <template x-for="(item, index) in items" :key="item.id">
+                                            <tr x-data="purchaseItem(item, index)" x-init="init()" class="bg-white border-b hover:bg-gray-50">
                                                 <td class="px-6 py-4 align-top">
-                                                    <select x-init="initTomSelect($el, index)" x-bind:name="'items[' + index + '][product_id]'" x-model="item.product_id"></select>
+                                                    <input type="hidden" x-bind:name="'items[' + index + '][product_id]'" x-model="item.product_id">
+                                                    <select x-ref="select"></select>
                                                 </td>
                                                 <td class="px-6 py-4 align-top">
-                                                    <x-text-input type="number" x-bind:name="'items[' + index + '][quantity]'" x-model.number="item.quantity" @input="calculateSubtotal(index)" class="block w-full" min="1" required />
+                                                    <x-text-input type="number" x-bind:name="'items[' + index + '][quantity]'" x-model.number="item.quantity" @input="calculateSubtotal()" class="block w-full" min="1" required />
                                                 </td>
                                                 <td class="px-6 py-4 align-top">
-                                                    <x-text-input type="number" x-bind:name="'items[' + index + '][purchase_price]'" x-model.number="item.purchase_price" @input="calculateSubtotal(index)" class="block w-full" min="0" required />
+                                                    <x-text-input type="number" x-bind:name="'items[' + index + '][purchase_price]'" x-model.number="item.purchase_price" @input="calculateSubtotal()" class="block w-full" min="0" required />
                                                 </td>
                                                 <td class="px-6 py-4 align-top" x-text="formatCurrency(item.subtotal)"></td>
-                                                <td class="px-6 py-4 align-top"><button type="button" @click="removeItem(index)" class="font-medium text-red-600 hover:underline">Hapus</button></td>
+                                                <td class="px-6 py-4 align-top"><button type="button" @click="$dispatch('remove-item', { index: index })" class="font-medium text-red-600 hover:underline">Hapus</button></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -95,8 +103,35 @@
                         </div>
 
                         <div class="flex items-center justify-end mt-6">
-                            <a href="{{ route('dashboard') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300">Batal</a>
+                            <a href="{{ route('dashboard') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 rounded-md">Batal</a>
                             <x-primary-button class="ms-4">{{ __('Simpan Transaksi') }}</x-primary-button>
+                        </div>
+
+                        {{-- Modal Window untuk Galeri Produk --}}
+                        <div x-show="gallery.isOpen" @click.self="toggleGallery()" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+                            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                                <div class="p-4 border-b flex justify-between items-center">
+                                    <h3 class="text-lg font-semibold">Pilih Produk dari Galeri</h3>
+                                    <button type="button" @click="toggleGallery()" class="text-gray-500 hover:text-gray-800">&times;</button>
+                                </div>
+                                <div class="p-4 overflow-y-auto">
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                        <template x-for="product in gallery.products" :key="product.id">
+                                            <div @click="selectFromGallery(product)" class="border rounded-lg overflow-hidden cursor-pointer hover:border-indigo-500 hover:shadow">
+                                                <img :src="'/storage/' + product.image_path" :alt="product.name" class="w-full h-24 object-cover">
+                                                <div class="p-2">
+                                                    <p class="text-xs font-semibold truncate" x-text="product.name"></p>
+                                                    <p class="text-xs text-gray-500" x-text="'Stok: ' + product.stock"></p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="gallery.isLoading" class="text-center p-4">Memuat...</div>
+                                    <div x-show="gallery.pagination.next_page_url && !gallery.isLoading" class="text-center p-4">
+                                        <button type="button" @click="fetchGalleryProducts(gallery.pagination.next_page_url)" class="text-sm font-medium text-indigo-600 hover:underline">Muat Lebih Banyak</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -106,7 +141,6 @@
 
     @push('scripts')
     <script>
-        // Mengirim data 'old' dari PHP ke JavaScript
         window.oldItems = @json(old('items'));
         window.oldTotalAmount = @json(old('total_amount'));
     </script>

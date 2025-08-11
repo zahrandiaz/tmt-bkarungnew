@@ -1,26 +1,28 @@
-import TomSelect from 'tom-select';
-
 export default () => ({
-    items: window.oldItems || [{ product_id: '', quantity: 1, sale_price: 0, subtotal: 0 }],
+    items: window.oldItems || [{ id: Date.now(), product_id: '', quantity: 1, sale_price: 0, subtotal: 0, product_data: null }],
     total_amount: window.oldTotalAmount || 0,
+    
+    // [KEMBALIKAN] Properti untuk galeri
+    gallery: {
+        isOpen: false,
+        products: [],
+        pagination: {},
+        isLoading: false,
+    },
 
     init() {
+        // Listener ini akan menghitung ulang total setiap kali subtotal di baris anak berubah
+        window.addEventListener('subtotal-updated', () => this.calculateTotal());
         this.calculateTotal();
     },
 
     addItem() {
-        this.items.push({ product_id: '', quantity: 1, sale_price: 0, subtotal: 0 });
+        this.items.push({ id: Date.now(), product_id: '', quantity: 1, sale_price: 0, subtotal: 0, product_data: null });
     },
 
     removeItem(index) {
         this.items.splice(index, 1);
-        this.calculateTotal();
-    },
-
-    calculateSubtotal(index) {
-        const item = this.items[index];
-        item.subtotal = (item.quantity || 0) * (item.sale_price || 0);
-        this.calculateTotal();
+        this.calculateTotal(); // Hitung ulang total setelah menghapus
     },
 
     calculateTotal() {
@@ -31,31 +33,44 @@ export default () => ({
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
     },
 
-    initTomSelect(element, index) {
-        const tomselect = new TomSelect(element, {
-            valueField: 'id',
-            labelField: 'name',
-            searchField: ['name', 'sku'],
-            create: false,
-            render: {
-                option: (data, escape) => `<div><span class="font-semibold">${escape(data.name)}</span><span class="text-sm text-gray-500 ml-2">(Stok: ${escape(data.stock)})</span></div>`,
-                item: (item, escape) => `<div>${escape(item.name)}</div>`
-            },
-            load: (query, callback) => {
-                const url = `/api/products/search?q=${encodeURIComponent(query)}`;
-                fetch(url)
-                    .then(response => response.json())
-                    .then(json => callback(json))
-                    .catch(() => callback());
-            },
-            onChange: (value) => {
-                const product = tomselect.options[value];
-                if (product) {
-                    this.items[index].product_id = product.id;
-                    this.items[index].sale_price = product.selling_price;
-                    this.calculateSubtotal(index);
-                }
-            }
-        });
+    // [KEMBALIKAN] Fungsi-fungsi untuk galeri
+    toggleGallery() {
+        this.gallery.isOpen = !this.gallery.isOpen;
+        if (this.gallery.isOpen && this.gallery.products.length === 0) {
+            this.fetchGalleryProducts();
+        }
+    },
+
+    fetchGalleryProducts(url = '/api/products/gallery') {
+        if (this.gallery.isLoading) return;
+        this.gallery.isLoading = true;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                this.gallery.products.push(...data.data);
+                this.gallery.pagination = data;
+                this.gallery.isLoading = false;
+            });
+    },
+
+    selectFromGallery(product) {
+        // Cari baris kosong pertama
+        let targetIndex = this.items.findIndex(item => !item.product_id);
+        
+        // Jika tidak ada baris kosong, buat yang baru
+        if (targetIndex === -1) {
+            this.addItem();
+            targetIndex = this.items.length - 1;
+        }
+
+        // Isi data baris tersebut
+        this.items[targetIndex].product_id = product.id;
+        this.items[targetIndex].sale_price = product.selling_price;
+        this.items[targetIndex].subtotal = product.selling_price * this.items[targetIndex].quantity;
+        this.items[targetIndex].product_data = product; // Data lengkap untuk inisialisasi TomSelect
+
+        this.calculateTotal();
+        this.gallery.isOpen = false;
     }
 });

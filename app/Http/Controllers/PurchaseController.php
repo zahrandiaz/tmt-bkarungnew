@@ -8,12 +8,12 @@ use App\Models\Supplier;
 use App\Http\Requests\StorePurchaseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage; // <-- [BARU]
-use Intervention\Image\Laravel\Facades\Image; // <-- [BARU]
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 
 class PurchaseController extends Controller
 {
-    // ... (method index, create, dll. tetap sama) ...
+    // ... (method index, create, store tetap sama) ...
     public function index(Request $request)
     {
         $status = $request->query('status');
@@ -33,20 +33,15 @@ class PurchaseController extends Controller
         return view('purchases.create', compact('suppliers'));
     }
 
-    /**
-     * Menyimpan sumber daya yang baru dibuat.
-     */
     public function store(StorePurchaseRequest $request)
     {
         $validatedData = $request->validated();
-
         try {
             DB::transaction(function () use ($validatedData, $request) {
                 $latestPurchaseId = Purchase::withTrashed()->latest('id')->first()?->id ?? 0;
                 $purchaseCode = 'PUR/' . now()->format('Ym') . '/' . str_pad($latestPurchaseId + 1, 5, '0', STR_PAD_LEFT);
                 
                 $invoiceImagePath = null;
-                // [BARU] Logika untuk unggah gambar faktur
                 if ($request->hasFile('invoice_image')) {
                     $image = $request->file('invoice_image');
                     $fileName = time() . '_' . \Illuminate\Support\Str::random(10) . '.webp';
@@ -63,7 +58,7 @@ class PurchaseController extends Controller
                     'purchase_date' => $validatedData['purchase_date'],
                     'total_amount' => $validatedData['total_amount'],
                     'notes' => $validatedData['notes'],
-                    'invoice_image_path' => $invoiceImagePath, // <-- [BARU]
+                    'invoice_image_path' => $invoiceImagePath,
                 ]);
 
                 foreach ($validatedData['items'] as $item) {
@@ -74,21 +69,23 @@ class PurchaseController extends Controller
                     ]);
                 }
             });
-
             return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', 'Transaksi pembelian berhasil disimpan.');
-
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
         }
     }
-    
-    // ... (method show, cancel, restore tetap sama) ...
-    public function show(Purchase $purchase)
+
+    /**
+     * Menampilkan sumber daya yang spesifik.
+     */
+    public function show($id)
     {
-        $purchase->load('supplier', 'details.product');
+        // [MODIFIKASI] Gunakan withTrashed() dan muat relasi user
+        $purchase = Purchase::withTrashed()->with(['supplier', 'user', 'details.product'])->findOrFail($id);
         return view('purchases.show', compact('purchase'));
     }
     
+    // ... (method cancel, restore tetap sama) ...
     public function cancel(Purchase $purchase)
     {
         $purchase->delete();
@@ -105,9 +102,11 @@ class PurchaseController extends Controller
     /**
      * Menghapus sumber daya secara permanen.
      */
-    public function destroy(Purchase $purchase)
+    public function destroy($id)
     {
-        // [BARU] Hapus gambar faktur jika ada
+        // [MODIFIKASI] Gunakan findOrFail dengan withTrashed
+        $purchase = Purchase::withTrashed()->findOrFail($id);
+        
         if ($purchase->invoice_image_path) {
             Storage::disk('public')->delete($purchase->invoice_image_path);
         }
