@@ -70,8 +70,15 @@ Route::middleware(['auth', 'role:Admin|Manager|Staf'])->group(function () {
     Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
     Route::resource('sales', SaleController::class)->except(['destroy']);
 
-    // [BARU] API untuk pencarian produk
+    // API untuk pencarian produk
     Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search');
+    
+    // [BARU] API untuk galeri produk
+    Route::get('/api/products/gallery', [ProductController::class, 'gallery'])->name('api.products.gallery');
+
+    // Rute untuk cetak dan unduh
+    Route::get('sales/{id}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
+    Route::get('sales/{id}/download-pdf', [SaleController::class, 'downloadPDF'])->name('sales.downloadPDF');
 });
 
 

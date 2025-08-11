@@ -1,13 +1,15 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 
-// Impor komponen
 import saleForm from './components/saleForm';
-import purchaseForm from './components/purchaseForm'; // <-- [BARU]
+import saleItem from './components/saleItem';
+import purchaseForm from './components/purchaseForm';
+import purchaseItem from './components/purchaseItem'; // <-- [BARU]
 
-// Daftarkan komponen
 Alpine.data('saleForm', saleForm);
-Alpine.data('purchaseForm', purchaseForm); // <-- [BARU]
+Alpine.data('saleItem', saleItem);
+Alpine.data('purchaseForm', purchaseForm);
+Alpine.data('purchaseItem', purchaseItem); // <-- [BARU]
 
 window.Alpine = Alpine;
 Alpine.start();
