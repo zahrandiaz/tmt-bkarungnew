@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany; // <-- TAMBAHKAN INI
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
@@ -17,10 +18,10 @@ class Sale extends Model
         'customer_id',
         'sale_date',
         'total_amount',
-        'payment_method',   // DITAMBAHKAN
-        'payment_status',   // DITAMBAHKAN
-        'down_payment',     // DITAMBAHKAN
-        'total_paid',       // DITAMBAHKAN
+        'payment_method',
+        'payment_status',
+        'down_payment',
+        'total_paid',
         'notes',
         'user_id',
     ];
@@ -34,7 +35,7 @@ class Sale extends Model
     }
 
     /**
-     * [BARU] Mendapatkan pengguna (staf) yang mencatat penjualan ini.
+     * Mendapatkan pengguna (staf) yang mencatat penjualan ini.
      */
     public function user(): BelongsTo
     {
@@ -47,5 +48,13 @@ class Sale extends Model
     public function details(): HasMany
     {
         return $this->hasMany(SaleDetail::class);
+    }
+
+    /**
+     * [BARU] Mendapatkan semua riwayat pembayaran untuk penjualan ini.
+     */
+    public function payments(): MorphMany
+    {
+        return $this->morphMany(Payment::class, 'payable');
     }
 }

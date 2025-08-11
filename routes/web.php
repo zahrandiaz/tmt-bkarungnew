@@ -13,7 +13,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReceivableController;
-use App\Http\Controllers\DebtController; // <-- [1. TAMBAHKAN INI]
+use App\Http\Controllers\DebtController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -63,7 +63,13 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     
     // Manajemen Keuangan
     Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index');
-    Route::get('debts', [DebtController::class, 'index'])->name('debts.index'); // <-- [2. TAMBAHKAN INI]
+    Route::get('receivables/{sale}/manage', [ReceivableController::class, 'manage'])->name('receivables.manage');
+    Route::post('receivables/{sale}/payments', [ReceivableController::class, 'storePayment'])->name('receivables.payments.store');
+
+    Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
+    // [BARU] Rute untuk mengelola pembayaran utang
+    Route::get('debts/{purchase}/manage', [DebtController::class, 'manage'])->name('debts.manage');
+    Route::post('debts/{purchase}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store');
 });
 
 // Rute untuk ADMIN, MANAGER, dan STAF
