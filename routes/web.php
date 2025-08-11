@@ -12,6 +12,8 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReceivableController;
+use App\Http\Controllers\DebtController; // <-- [1. TAMBAHKAN INI]
 
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +60,10 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export');
     Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export');
     Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export');
+    
+    // Manajemen Keuangan
+    Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index');
+    Route::get('debts', [DebtController::class, 'index'])->name('debts.index'); // <-- [2. TAMBAHKAN INI]
 });
 
 // Rute untuk ADMIN, MANAGER, dan STAF
@@ -73,7 +79,7 @@ Route::middleware(['auth', 'role:Admin|Manager|Staf'])->group(function () {
     // API untuk pencarian produk
     Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search');
     
-    // [BARU] API untuk galeri produk
+    // API untuk galeri produk
     Route::get('/api/products/gallery', [ProductController::class, 'gallery'])->name('api.products.gallery');
 
     // Rute untuk cetak dan unduh

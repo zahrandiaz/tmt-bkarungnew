@@ -35,27 +35,58 @@ class SaleController extends Controller
     public function store(StoreSaleRequest $request)
     {
         $validatedData = $request->validated();
+
         try {
-            DB::transaction(function () use ($validatedData, $request) { 
+            DB::transaction(function () use ($validatedData, $request) {
+                // [LOGIKA BARU] Tentukan jumlah yang dibayar berdasarkan status
+                $totalAmount = $validatedData['total_amount'];
+                $paymentStatus = $validatedData['payment_status'];
+                $totalPaid = 0;
+
+                if ($paymentStatus === 'lunas') {
+                    $totalPaid = $totalAmount;
+                } elseif ($paymentStatus === 'belum lunas') {
+                    // Pastikan down_payment tidak null, jika null anggap 0
+                    $totalPaid = $validatedData['down_payment'] ?? 0;
+                }
+
+                // Generate Invoice Number
                 $latestSaleId = Sale::withTrashed()->latest('id')->first()?->id ?? 0;
                 $invoiceNumber = 'INV/' . now()->format('Ym') . '/' . str_pad($latestSaleId + 1, 5, '0', STR_PAD_LEFT);
+
+                // Buat entri penjualan dengan data pembayaran
                 $sale = Sale::create([
-                    'invoice_number' => $invoiceNumber, 
+                    'invoice_number' => $invoiceNumber,
                     'customer_id' => $validatedData['customer_id'],
-                    'user_id' => $request->user()->id, 
                     'sale_date' => $validatedData['sale_date'],
-                    'total_amount' => $validatedData['total_amount'],
-                    'notes' => $validatedData['notes'],
+                    'total_amount' => $totalAmount,
+                    'notes' => $validatedData['notes'] ?? null,
+                    'user_id' => $request->user()->id,
+                    // [KOLOM BARU]
+                    'payment_method' => $validatedData['payment_method'],
+                    'payment_status' => $paymentStatus,
+                    'down_payment' => $validatedData['down_payment'] ?? null,
+                    'total_paid' => $totalPaid,
                 ]);
+
+                // Simpan detail item penjualan
                 foreach ($validatedData['items'] as $item) {
                     $sale->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'sale_price' => $item['sale_price'],
                     ]);
+
+                    // Kurangi stok produk
+                    $product = Product::find($item['product_id']);
+                    if ($product) {
+                        $product->decrement('stock', $item['quantity']);
+                    }
                 }
             });
+
             return redirect()->route('sales.index', ['status' => 'selesai'])->with('success', 'Transaksi penjualan berhasil disimpan.');
+
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
         }

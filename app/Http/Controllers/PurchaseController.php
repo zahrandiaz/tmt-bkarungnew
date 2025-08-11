@@ -38,9 +38,22 @@ class PurchaseController extends Controller
         $validatedData = $request->validated();
         try {
             DB::transaction(function () use ($validatedData, $request) {
+                // [LOGIKA BARU] Tentukan jumlah yang dibayar berdasarkan status
+                $totalAmount = $validatedData['total_amount'];
+                $paymentStatus = $validatedData['payment_status'];
+                $totalPaid = 0;
+
+                if ($paymentStatus === 'lunas') {
+                    $totalPaid = $totalAmount;
+                } elseif ($paymentStatus === 'belum lunas') {
+                    $totalPaid = $validatedData['down_payment'] ?? 0;
+                }
+
+                // Generate Purchase Code
                 $latestPurchaseId = Purchase::withTrashed()->latest('id')->first()?->id ?? 0;
                 $purchaseCode = 'PUR/' . now()->format('Ym') . '/' . str_pad($latestPurchaseId + 1, 5, '0', STR_PAD_LEFT);
                 
+                // Handle file upload
                 $invoiceImagePath = null;
                 if ($request->hasFile('invoice_image')) {
                     $image = $request->file('invoice_image');
@@ -50,26 +63,41 @@ class PurchaseController extends Controller
                     $invoiceImagePath = 'invoices/' . $fileName;
                 }
 
+                // Buat entri pembelian dengan data pembayaran
                 $purchase = Purchase::create([
                     'purchase_code' => $purchaseCode,
-                    'reference_number' => $validatedData['reference_number'] ?? null,
                     'supplier_id' => $validatedData['supplier_id'],
-                    'user_id' => $request->user()->id,
                     'purchase_date' => $validatedData['purchase_date'],
-                    'total_amount' => $validatedData['total_amount'],
-                    'notes' => $validatedData['notes'],
+                    'total_amount' => $totalAmount,
+                    'reference_number' => $validatedData['reference_number'] ?? null,
+                    'notes' => $validatedData['notes'] ?? null,
                     'invoice_image_path' => $invoiceImagePath,
+                    'user_id' => $request->user()->id,
+                    // [KOLOM BARU]
+                    'payment_method' => $validatedData['payment_method'],
+                    'payment_status' => $paymentStatus,
+                    'down_payment' => $validatedData['down_payment'] ?? null,
+                    'total_paid' => $totalPaid,
                 ]);
 
+                // Simpan detail item dan tambah stok produk
                 foreach ($validatedData['items'] as $item) {
                     $purchase->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'purchase_price' => $item['purchase_price'],
                     ]);
+
+                    // [LOGIKA PENTING] Tambah stok produk
+                    $product = Product::find($item['product_id']);
+                    if ($product) {
+                        $product->increment('stock', $item['quantity']);
+                    }
                 }
             });
+
             return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', 'Transaksi pembelian berhasil disimpan.');
+
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
         }
