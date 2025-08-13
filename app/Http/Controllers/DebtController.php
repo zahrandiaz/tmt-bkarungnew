@@ -6,6 +6,9 @@ use App\Models\Purchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+// [BARU V1.10.0] Import class yang diperlukan untuk kompresi gambar
+use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Str;
 
 class DebtController extends Controller
 {
@@ -14,14 +17,13 @@ class DebtController extends Controller
      */
     public function index(Request $request)
     {
-        // [UBAH] Tambahkan logika untuk filter status
         $status = $request->query('status', 'belum lunas'); // Default ke 'belum lunas'
         $query = Purchase::query();
 
         if ($status == 'lunas') {
-            $query->where('payment_status', 'lunas');
+            $query->where('payment_status', 'Lunas');
         } else {
-            $query->where('payment_status', 'belum lunas');
+            $query->where('payment_status', 'Belum Lunas');
         }
 
         $debts = $query->with('supplier')->latest()->paginate(10)->withQueryString();
@@ -52,15 +54,25 @@ class DebtController extends Controller
         ]);
 
         $remainingAmount = $purchase->total_amount - $purchase->total_paid;
-        if ($validated['amount'] > $remainingAmount) {
+        // Tambahkan toleransi kecil untuk masalah floating point
+        if ($validated['amount'] > $remainingAmount + 0.001) {
             return back()->with('error', 'Jumlah pembayaran melebihi sisa tagihan.');
         }
 
         try {
             DB::transaction(function () use ($validated, $purchase, $request) {
                 $attachmentPath = null;
+                
+                // [MODIFIKASI V1.10.0] Logika kompresi gambar
                 if ($request->hasFile('attachment')) {
-                    $attachmentPath = $request->file('attachment')->store('payment_proofs', 'public');
+                    $image = $request->file('attachment');
+                    // Buat nama file unik dengan format webp
+                    $fileName = time() . '_' . Str::random(10) . '.webp';
+                    // Kompresi dan simpan gambar
+                    $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+                    Storage::disk('public')->put('payment_proofs/' . $fileName, (string) $imageCompressed);
+                    // Simpan path yang benar
+                    $attachmentPath = 'payment_proofs/' . $fileName;
                 }
 
                 $purchase->payments()->create([
@@ -74,15 +86,16 @@ class DebtController extends Controller
 
                 $purchase->total_paid += $validated['amount'];
 
-                if ($purchase->total_paid >= $purchase->total_amount) {
-                    $purchase->payment_status = 'lunas';
+                // Gunakan perbandingan dengan toleransi untuk menghindari masalah floating point
+                if ($purchase->total_paid >= $purchase->total_amount - 0.001) {
+                    $purchase->payment_status = 'Lunas';
                 }
 
                 $purchase->save();
             });
 
-            // [UBAH] Jika lunas, arahkan kembali ke daftar utang lunas
-            if($purchase->payment_status == 'lunas') {
+            // Jika lunas, arahkan kembali ke daftar utang lunas
+            if($purchase->payment_status == 'Lunas') {
                 return redirect()->route('debts.index', ['status' => 'lunas'])->with('success', 'Pembayaran berhasil dicatat. Utang telah lunas.');
             }
 
