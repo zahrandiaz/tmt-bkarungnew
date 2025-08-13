@@ -38,14 +38,18 @@ class PurchaseController extends Controller
         $validatedData = $request->validated();
         try {
             DB::transaction(function () use ($validatedData, $request) {
-                // [LOGIKA BARU] Tentukan jumlah yang dibayar berdasarkan status
+                // [PERBAIKAN V1.9.0] Standarisasi nilai payment_status
                 $totalAmount = $validatedData['total_amount'];
-                $paymentStatus = $validatedData['payment_status'];
+                $paymentStatusRaw = $validatedData['payment_status'];
+                // Mengubah 'lunas' -> 'Lunas' atau 'belum lunas' -> 'Belum Lunas'
+                $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw));
+
                 $totalPaid = 0;
 
-                if ($paymentStatus === 'lunas') {
+                // Gunakan nilai yang sudah distandarisasi untuk logika dan penyimpanan
+                if ($paymentStatus === 'Lunas') {
                     $totalPaid = $totalAmount;
-                } elseif ($paymentStatus === 'belum lunas') {
+                } elseif ($paymentStatus === 'Belum Lunas') {
                     $totalPaid = $validatedData['down_payment'] ?? 0;
                 }
 
@@ -63,7 +67,7 @@ class PurchaseController extends Controller
                     $invoiceImagePath = 'invoices/' . $fileName;
                 }
 
-                // Buat entri pembelian dengan data pembayaran
+                // Buat entri pembelian dengan data yang sudah standar
                 $purchase = Purchase::create([
                     'purchase_code' => $purchaseCode,
                     'supplier_id' => $validatedData['supplier_id'],
@@ -73,9 +77,8 @@ class PurchaseController extends Controller
                     'notes' => $validatedData['notes'] ?? null,
                     'invoice_image_path' => $invoiceImagePath,
                     'user_id' => $request->user()->id,
-                    // [KOLOM BARU]
                     'payment_method' => $validatedData['payment_method'],
-                    'payment_status' => $paymentStatus,
+                    'payment_status' => $paymentStatus, // Menyimpan nilai standar ('Lunas' / 'Belum Lunas')
                     'down_payment' => $validatedData['down_payment'] ?? null,
                     'total_paid' => $totalPaid,
                 ]);

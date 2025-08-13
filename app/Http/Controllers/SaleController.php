@@ -38,15 +38,18 @@ class SaleController extends Controller
 
         try {
             DB::transaction(function () use ($validatedData, $request) {
-                // [LOGIKA BARU] Tentukan jumlah yang dibayar berdasarkan status
+                // [PERBAIKAN V1.9.0] Standarisasi nilai payment_status
                 $totalAmount = $validatedData['total_amount'];
-                $paymentStatus = $validatedData['payment_status'];
+                $paymentStatusRaw = $validatedData['payment_status'];
+                // Mengubah 'lunas' -> 'Lunas' atau 'belum lunas' -> 'Belum Lunas'
+                $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw)); 
+
                 $totalPaid = 0;
 
-                if ($paymentStatus === 'lunas') {
+                // Gunakan nilai yang sudah distandarisasi untuk logika dan penyimpanan
+                if ($paymentStatus === 'Lunas') {
                     $totalPaid = $totalAmount;
-                } elseif ($paymentStatus === 'belum lunas') {
-                    // Pastikan down_payment tidak null, jika null anggap 0
+                } elseif ($paymentStatus === 'Belum Lunas') {
                     $totalPaid = $validatedData['down_payment'] ?? 0;
                 }
 
@@ -54,7 +57,7 @@ class SaleController extends Controller
                 $latestSaleId = Sale::withTrashed()->latest('id')->first()?->id ?? 0;
                 $invoiceNumber = 'INV/' . now()->format('Ym') . '/' . str_pad($latestSaleId + 1, 5, '0', STR_PAD_LEFT);
 
-                // Buat entri penjualan dengan data pembayaran
+                // Buat entri penjualan dengan data yang sudah standar
                 $sale = Sale::create([
                     'invoice_number' => $invoiceNumber,
                     'customer_id' => $validatedData['customer_id'],
@@ -62,9 +65,8 @@ class SaleController extends Controller
                     'total_amount' => $totalAmount,
                     'notes' => $validatedData['notes'] ?? null,
                     'user_id' => $request->user()->id,
-                    // [KOLOM BARU]
                     'payment_method' => $validatedData['payment_method'],
-                    'payment_status' => $paymentStatus,
+                    'payment_status' => $paymentStatus, // Menyimpan nilai standar ('Lunas' / 'Belum Lunas')
                     'down_payment' => $validatedData['down_payment'] ?? null,
                     'total_paid' => $totalPaid,
                 ]);

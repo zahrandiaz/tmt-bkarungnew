@@ -29,19 +29,19 @@
                     
                     <div class="mb-4 border-b border-gray-200">
                         <nav class="flex -mb-px space-x-4" aria-label="Tabs">
-                             <a href="{{ route('sales.index', ['status' => 'selesai']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status', 'selesai') == 'selesai' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                                Selesai
-                            </a>
-                            <a href="{{ route('sales.index', ['status' => 'semua']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'semua' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                                Semua
-                            </a>
-                            <a href="{{ route('sales.index', ['status' => 'dibatalkan']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'dibatalkan' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                                Dibatalkan
-                            </a>
+                                <a href="{{ route('sales.index', ['status' => 'selesai']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status', 'selesai') == 'selesai' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                    Selesai
+                                </a>
+                                <a href="{{ route('sales.index', ['status' => 'semua']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'semua' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                    Semua
+                                </a>
+                                <a href="{{ route('sales.index', ['status' => 'dibatalkan']) }}" class="px-3 py-2 font-medium text-sm rounded-md {{ request('status') == 'dibatalkan' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                                    Dibatalkan
+                                </a>
                         </nav>
                     </div>
 
-                    {{-- [MODIFIKASI] Tabel Baru --}}
+                    {{-- [MODIFIKASI V1.9.0] Tabel dengan Status Bayar & Transaksi Terpisah --}}
                     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -51,7 +51,8 @@
                                     <th scope="col" class="px-6 py-3">Tanggal</th>
                                     <th scope="col" class="px-6 py-3">Pelanggan</th>
                                     <th scope="col" class="px-6 py-3">Total</th>
-                                    <th scope="col" class="px-6 py-3">Status</th>
+                                    <th scope="col" class="px-6 py-3">Status Bayar</th>
+                                    <th scope="col" class="px-6 py-3">Status Transaksi</th>
                                     <th scope="col" class="px-6 py-3">Aksi</th>
                                 </tr>
                             </thead>
@@ -64,10 +65,17 @@
                                     <td class="px-6 py-4">{{ $sale->customer->name }}</td>
                                     <td class="px-6 py-4">{{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}</td>
                                     <td class="px-6 py-4">
+                                        @if ($sale->payment_status == 'Lunas')
+                                            <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Lunas</span>
+                                        @elseif ($sale->payment_status == 'Belum Lunas')
+                                            <span class="px-2 py-1 font-semibold leading-tight text-yellow-700 bg-yellow-100 rounded-full">Belum Lunas</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
                                         @if ($sale->trashed())
                                             <span class="px-2 py-1 font-semibold leading-tight text-red-700 bg-red-100 rounded-full">Dibatalkan</span>
                                         @else
-                                            <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Selesai</span>
+                                            <span class="px-2 py-1 font-semibold leading-tight text-blue-700 bg-blue-100 rounded-full">Selesai</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-left flex items-center space-x-2">
@@ -80,12 +88,17 @@
                                             @endrole
                                         @else
                                             <a href="{{ route('sales.show', $sale->id) }}" class="font-medium text-blue-600 hover:underline">Detail</a>
+                                            @if ($sale->payment_status == 'Belum Lunas')
+                                                @role('Admin|Manager')
+                                                    <a href="{{ route('receivables.manage', $sale->id) }}" class="font-medium text-yellow-600 hover:underline">Kelola Bayar</a>
+                                                @endrole
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    <td colspan="7" class="px-6 py-4 text-center">
+                                    <td colspan="8" class="px-6 py-4 text-center">
                                         Belum ada data transaksi penjualan pada tab ini.
                                     </td>
                                 </tr>
