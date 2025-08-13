@@ -35,6 +35,7 @@
                                 <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-dropdown-link>
@@ -151,6 +152,7 @@
                 <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-responsive-nav-link>

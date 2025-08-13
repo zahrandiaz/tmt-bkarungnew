@@ -17,6 +17,7 @@ use App\Http\Controllers\DebtController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController; // <-- [1. TAMBAHKAN INI]
 use App\Http\Controllers\PriceAdjustmentController;
+use App\Http\Controllers\StockAdjustmentController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -80,6 +81,10 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     // Penyesuaian Harga
     Route::get('price-adjustments', [PriceAdjustmentController::class, 'index'])->name('price-adjustments.index');
     Route::post('price-adjustments', [PriceAdjustmentController::class, 'store'])->name('price-adjustments.store');
+
+    // Penyesuaian Stok
+    Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index');
+    Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store');
 });
 
 // Rute untuk ADMIN, MANAGER, dan STAF
