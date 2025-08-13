@@ -41,7 +41,7 @@
                         </nav>
                     </div>
 
-                    {{-- [MODIFIKASI] Tabel Baru --}}
+                    {{-- [MODIFIKASI V1.9.0] Tabel dengan Status Bayar & Transaksi Terpisah --}}
                     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -51,7 +51,8 @@
                                     <th scope="col" class="px-6 py-3">Tanggal</th>
                                     <th scope="col" class="px-6 py-3">Supplier</th>
                                     <th scope="col" class="px-6 py-3">Total</th>
-                                    <th scope="col" class="px-6 py-3">Status</th>
+                                    <th scope="col" class="px-6 py-3">Status Bayar</th>
+                                    <th scope="col" class="px-6 py-3">Status Transaksi</th>
                                     <th scope="col" class="px-6 py-3">Aksi</th>
                                 </tr>
                             </thead>
@@ -64,10 +65,17 @@
                                     <td class="px-6 py-4">{{ $purchase->supplier->name }}</td>
                                     <td class="px-6 py-4">{{ 'Rp ' . number_format($purchase->total_amount, 0, ',', '.') }}</td>
                                     <td class="px-6 py-4">
+                                        @if ($purchase->payment_status == 'Lunas')
+                                            <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Lunas</span>
+                                        @elseif ($purchase->payment_status == 'Belum Lunas')
+                                            <span class="px-2 py-1 font-semibold leading-tight text-yellow-700 bg-yellow-100 rounded-full">Belum Lunas</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
                                         @if ($purchase->trashed())
                                             <span class="px-2 py-1 font-semibold leading-tight text-red-700 bg-red-100 rounded-full">Dibatalkan</span>
                                         @else
-                                            <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Selesai</span>
+                                            <span class="px-2 py-1 font-semibold leading-tight text-blue-700 bg-blue-100 rounded-full">Selesai</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-left flex items-center space-x-2">
@@ -80,12 +88,17 @@
                                             @endrole
                                         @else
                                             <a href="{{ route('purchases.show', $purchase->id) }}" class="font-medium text-blue-600 hover:underline">Detail</a>
+                                            @if ($purchase->payment_status == 'Belum Lunas')
+                                                @role('Admin|Manager')
+                                                    <a href="{{ route('debts.manage', $purchase->id) }}" class="font-medium text-yellow-600 hover:underline">Kelola Bayar</a>
+                                                @endrole
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    <td colspan="7" class="px-6 py-4 text-center">
+                                    <td colspan="8" class="px-6 py-4 text-center">
                                         Belum ada data transaksi pembelian pada tab ini.
                                     </td>
                                 </tr>

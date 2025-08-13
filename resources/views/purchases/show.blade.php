@@ -1,7 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{-- [MODIFIKASI] Gunakan purchase_code --}}
             Detail Transaksi Pembelian #{{ $purchase->purchase_code }}
         </h2>
     </x-slot>
@@ -34,8 +33,8 @@
                         </div>
                     </div>
 
-                    {{-- [BARU] Informasi Detail Transaksi --}}
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 border-b pb-6">
+                    {{-- [MODIFIKASI V1.9.0] Informasi Detail Transaksi dengan Status Bayar --}}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Kode Pembelian</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->purchase_code }}</p>
@@ -44,9 +43,9 @@
                             <h3 class="text-sm font-medium text-gray-500">Status Transaksi</h3>
                             <p class="mt-1 text-lg font-semibold">
                                 @if ($purchase->trashed())
-                                    <span class="text-red-600">Dibatalkan</span>
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-red-700 bg-red-100 rounded-full">Dibatalkan</span>
                                 @else
-                                    <span class="text-green-600">Selesai</span>
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-blue-700 bg-blue-100 rounded-full">Selesai</span>
                                 @endif
                             </p>
                         </div>
@@ -58,17 +57,30 @@
                             <h3 class="text-sm font-medium text-gray-500">Dicatat Oleh</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->user->name ?? 'N/A' }}</p>
                         </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 border-b pb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Supplier</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->supplier->name }}</p>
                         </div>
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500">No. Referensi</h3>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->reference_number ?? '-' }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Status Pembayaran</h3>
+                            <p class="mt-1 text-lg font-semibold">
+                                @if ($purchase->payment_status == 'Lunas')
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Lunas</span>
+                                @elseif ($purchase->payment_status == 'Belum Lunas')
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-yellow-700 bg-yellow-100 rounded-full">Belum Lunas</span>
+                                @endif
+                            </p>
                         </div>
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500">Total Pembelian</h3>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ 'Rp ' . number_format($purchase->total_amount, 0, ',', '.') }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Metode Pembayaran</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->payment_method }}</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">No. Referensi</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $purchase->reference_number ?? '-' }}</p>
                         </div>
                     </div>
 
@@ -77,7 +89,6 @@
                             <h3 class="text-sm font-medium text-gray-500">Catatan</h3>
                             <p class="mt-1 text-gray-700">{{ $purchase->notes ?? 'Tidak ada catatan.' }}</p>
                         </div>
-                        {{-- [BARU] Tampilkan Gambar Faktur --}}
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Gambar Faktur</h3>
                             @if($purchase->invoice_image_path)
@@ -113,9 +124,19 @@
                             </tbody>
                             <tfoot class="font-bold text-gray-900">
                                 <tr>
-                                    <td colspan="3" class="px-6 py-3 text-right">Total</td>
+                                    <td colspan="3" class="px-6 py-3 text-right">Total Pembelian</td>
                                     <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($purchase->total_amount, 0, ',', '.') }}</td>
                                 </tr>
+                                @if($purchase->payment_status == 'Belum Lunas')
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right">Uang Muka (DP)</td>
+                                    <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($purchase->down_payment, 0, ',', '.') }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right">Sisa Tagihan</td>
+                                    <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($purchase->total_amount - $purchase->total_paid, 0, ',', '.') }}</td>
+                                </tr>
+                                @endif
                             </tfoot>
                         </table>
                     </div>

@@ -1,7 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{-- [MODIFIKASI] Gunakan invoice_number --}}
             Detail Transaksi Penjualan #{{ $sale->invoice_number }}
         </h2>
     </x-slot>
@@ -16,7 +15,6 @@
                             &larr; Kembali
                         </a>
                         
-                        {{-- [MODIFIKASI] Tombol Aksi Baru --}}
                         <div class="flex items-center space-x-2">
                             @if (!$sale->trashed())
                                 <a href="{{ route('sales.printThermal', $sale->id) }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500">Cetak Struk</a>
@@ -37,8 +35,8 @@
                         </div>
                     </div>
 
-                    {{-- [BARU] Informasi Detail Transaksi --}}
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 border-b pb-6">
+                    {{-- [MODIFIKASI V1.9.0] Informasi Detail Transaksi dengan Status Bayar --}}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">No. Invoice</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $sale->invoice_number }}</p>
@@ -47,9 +45,9 @@
                             <h3 class="text-sm font-medium text-gray-500">Status Transaksi</h3>
                             <p class="mt-1 text-lg font-semibold">
                                 @if ($sale->trashed())
-                                    <span class="text-red-600">Dibatalkan</span>
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-red-700 bg-red-100 rounded-full">Dibatalkan</span>
                                 @else
-                                    <span class="text-green-600">Selesai</span>
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-blue-700 bg-blue-100 rounded-full">Selesai</span>
                                 @endif
                             </p>
                         </div>
@@ -61,19 +59,32 @@
                             <h3 class="text-sm font-medium text-gray-500">Dicatat Oleh</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $sale->user->name ?? 'N/A' }}</p>
                         </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 border-b pb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Pelanggan</h3>
                             <p class="mt-1 text-lg font-semibold text-gray-900">{{ $sale->customer->name }}</p>
                         </div>
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500">Total Penjualan</h3>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Status Pembayaran</h3>
+                            <p class="mt-1 text-lg font-semibold">
+                                @if ($sale->payment_status == 'Lunas')
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-green-700 bg-green-100 rounded-full">Lunas</span>
+                                @elseif ($sale->payment_status == 'Belum Lunas')
+                                    <span class="px-3 py-1 text-sm font-semibold leading-tight text-yellow-700 bg-yellow-100 rounded-full">Belum Lunas</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Metode Pembayaran</h3>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $sale->payment_method }}</p>
                         </div>
                     </div>
 
                     <div class="mb-6">
-                         <h3 class="text-sm font-medium text-gray-500">Catatan</h3>
-                         <p class="mt-1 text-gray-700">{{ $sale->notes ?? 'Tidak ada catatan.' }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Catatan</h3>
+                            <p class="mt-1 text-gray-700">{{ $sale->notes ?? 'Tidak ada catatan.' }}</p>
                     </div>
 
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Rincian Produk</h3>
@@ -99,9 +110,19 @@
                             </tbody>
                             <tfoot class="font-bold text-gray-900">
                                 <tr>
-                                    <td colspan="3" class="px-6 py-3 text-right">Total</td>
+                                    <td colspan="3" class="px-6 py-3 text-right">Total Penjualan</td>
                                     <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}</td>
                                 </tr>
+                                @if($sale->payment_status == 'Belum Lunas')
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right">Uang Muka (DP)</td>
+                                    <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($sale->down_payment, 0, ',', '.') }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right">Sisa Tagihan</td>
+                                    <td class="px-6 py-3 text-right">{{ 'Rp ' . number_format($sale->total_amount - $sale->total_paid, 0, ',', '.') }}</td>
+                                </tr>
+                                @endif
                             </tfoot>
                         </table>
                     </div>
