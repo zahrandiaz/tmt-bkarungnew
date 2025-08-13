@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\Purchase;
 use App\Models\Product;
 use App\Models\SaleDetail;
+use App\Models\Expense; // <-- [1. TAMBAHKAN INI]
 use Carbon\Carbon;
 use App\Exports\SalesExport;
 use App\Exports\PurchasesExport;
@@ -15,9 +16,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
-    /**
-     * Menampilkan halaman laporan penjualan dengan filter.
-     */
+    // ... (method salesReport, purchasesReport, stockReport tetap sama) ...
     public function salesReport(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -65,29 +64,31 @@ class ReportController extends Controller
     }
 
     /**
-     * [DIPERBAIKI] Menampilkan halaman laporan laba rugi sederhana dengan filter.
+     * [DIROMBAK] Menampilkan laporan laba rugi lengkap.
      */
     public function profitAndLossReport(Request $request)
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        $totalRevenue = 0;
-        $totalCostOfGoods = 0;
+        // Inisialisasi query builder
+        $salesQuery = Sale::query()->where('payment_status', 'lunas'); // Hanya hitung yang lunas
+        $expensesQuery = Expense::query();
 
-        $salesQuery = Sale::query()->with('details.product');
-
+        // Terapkan filter tanggal jika ada
         if ($startDate && $endDate) {
             $start = Carbon::parse($startDate)->startOfDay();
             $end = Carbon::parse($endDate)->endOfDay();
-            $salesQuery->whereBetween('created_at', [$start, $end]);
+            $salesQuery->whereBetween('sale_date', [$start, $end]);
+            $expensesQuery->whereBetween('expense_date', [$start, $end]);
         }
 
-        $sales = $salesQuery->get();
-
-        foreach ($sales as $sale) {
+        // Hitung Total Pendapatan
+        // Note: Ini masih menggunakan pendekatan HPP Sederhana. Nanti bisa kita tingkatkan.
+        $totalRevenue = 0;
+        $totalCostOfGoods = 0;
+        foreach ($salesQuery->with('details.product')->get() as $sale) {
             foreach ($sale->details as $detail) {
-                // Gunakan 'sale_price' sesuai model SaleDetail
                 $totalRevenue += ($detail->quantity * $detail->sale_price);
                 if ($detail->product) {
                     $totalCostOfGoods += ($detail->quantity * $detail->product->purchase_price);
@@ -95,20 +96,25 @@ class ReportController extends Controller
             }
         }
 
-        $totalProfit = $totalRevenue - $totalCostOfGoods;
+        // Hitung Total Biaya Operasional
+        $totalExpenses = $expensesQuery->sum('amount');
+        
+        // Kalkulasi Final
+        $grossProfit = $totalRevenue - $totalCostOfGoods;
+        $netProfit = $grossProfit - $totalExpenses;
 
         return view('reports.profit_and_loss', [
             'startDate' => $startDate,
             'endDate' => $endDate,
             'totalRevenue' => $totalRevenue,
             'totalCostOfGoods' => $totalCostOfGoods,
-            'totalProfit' => $totalProfit,
+            'grossProfit' => $grossProfit,
+            'totalExpenses' => $totalExpenses,
+            'netProfit' => $netProfit,
         ]);
     }
 
-    /**
-     * [BARU] Menangani permintaan ekspor untuk Laporan Penjualan.
-     */
+    // ... (method export tetap sama) ...
     public function exportSales(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -118,9 +124,6 @@ class ReportController extends Controller
         return Excel::download(new SalesExport($startDate, $endDate), $fileName);
     }
 
-    /**
-     * [BARU] Menangani permintaan ekspor untuk Laporan Pembelian.
-     */
     public function exportPurchases(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -130,9 +133,6 @@ class ReportController extends Controller
         return Excel::download(new PurchasesExport($startDate, $endDate), $fileName);
     }
 
-    /**
-     * [BARU] Menangani permintaan ekspor untuk Laporan Stok.
-     */
     public function exportStock()
     {
         $fileName = 'laporan-stok-' . Carbon::now()->format('Y-m-d') . '.csv';

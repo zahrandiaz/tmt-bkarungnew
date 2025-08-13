@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Laporan Laba Rugi Sederhana') }}
+            {{ __('Laporan Laba Rugi') }}
         </h2>
     </x-slot>
 
@@ -31,32 +31,50 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-gray-700">Total Pendapatan (Revenue)</h3>
-                    <p class="mt-2 text-3xl font-bold text-blue-600">
-                        Rp {{ number_format($totalRevenue, 0, ',', '.') }}
-                    </p>
+            <div class="space-y-6">
+                {{-- Bagian Pendapatan & HPP --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-700">Total Pendapatan</h3>
+                        <p class="mt-2 text-3xl font-bold text-blue-600">
+                            Rp {{ number_format($totalRevenue, 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-700">Total HPP</h3>
+                        <p class="mt-2 text-3xl font-bold text-orange-600">
+                           - Rp {{ number_format($totalCostOfGoods, 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-400">
+                        <h3 class="text-lg font-semibold text-gray-700">Laba Kotor</h3>
+                        <p class="mt-2 text-3xl font-bold {{ $grossProfit >= 0 ? 'text-gray-800' : 'text-red-600' }}">
+                            Rp {{ number_format($grossProfit, 0, ',', '.') }}
+                        </p>
+                    </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-gray-700">Total Modal (HPP)</h3>
-                    <p class="mt-2 text-3xl font-bold text-red-600">
-                        Rp {{ number_format($totalCostOfGoods, 0, ',', '.') }}
-                    </p>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-gray-700">Laba Kotor</h3>
-                    <p class="mt-2 text-3xl font-bold {{ $totalProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        Rp {{ number_format($totalProfit, 0, ',', '.') }}
-                    </p>
+                {{-- Bagian Biaya & Laba Bersih --}}
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-700">Total Biaya Operasional</h3>
+                        <p class="mt-2 text-3xl font-bold text-red-600">
+                           - Rp {{ number_format($totalExpenses, 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md border-l-4 {{ $netProfit >= 0 ? 'border-green-500' : 'border-red-500' }}">
+                        <h3 class="text-xl font-semibold text-gray-700">Laba Bersih</h3>
+                        <p class="mt-2 text-4xl font-bold {{ $netProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                            Rp {{ number_format($netProfit, 0, ',', '.') }}
+                        </p>
+                    </div>
                 </div>
             </div>
-             <div class="mt-4 text-sm text-gray-600">
-                <p>* Laporan ini dihitung berdasarkan penjualan yang sudah selesai pada rentang tanggal yang dipilih.</p>
+             
+             <div class="mt-6 text-sm text-gray-600">
+                <p>* Laporan ini hanya menghitung penjualan dengan status <strong>Lunas</strong> pada rentang tanggal yang dipilih.</p>
                 <p>* HPP (Harga Pokok Penjualan) dihitung dari harga beli produk saat ini di master data.</p>
             </div>
+
         </div>
     </div>
 </x-app-layout>
