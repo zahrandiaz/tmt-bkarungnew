@@ -36,6 +36,7 @@
                                 <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
                     </div>
@@ -73,6 +74,7 @@
                                 <x-slot name="content">
                                     <x-dropdown-link :href="route('receivables.index')">{{ __('Manajemen Piutang') }}</x-dropdown-link>
                                     <x-dropdown-link :href="route('debts.index')">{{ __('Manajemen Utang') }}</x-dropdown-link>
+                                    <x-dropdown-link :href="route('expenses.index')">{{ __('Manajemen Biaya') }}</x-dropdown-link>
                                 </x-slot>
                             </x-dropdown>
                         </div>
@@ -149,6 +151,7 @@
                 <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-responsive-nav-link>
             </div>
         </div>
         @endhasanyrole
@@ -172,6 +175,7 @@
                 <div class="mt-3 space-y-1">
                     <x-responsive-nav-link :href="route('receivables.index')">{{ __('Manajemen Piutang') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('debts.index')">{{ __('Manajemen Utang') }}</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('expenses.index')">{{ __('Manajemen Biaya') }}</x-responsive-nav-link>
                 </div>
             </div>
 

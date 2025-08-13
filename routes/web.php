@@ -14,6 +14,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseController; // <-- [1. TAMBAHKAN INI]
 
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +51,7 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     Route::resource('products', ProductController::class);
     Route::resource('suppliers', SupplierController::class);
     Route::resource('customers', CustomerController::class);
+    Route::resource('expense-categories', ExpenseCategoryController::class);
     
     // Laporan
     Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
@@ -67,9 +70,11 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     Route::post('receivables/{sale}/payments', [ReceivableController::class, 'storePayment'])->name('receivables.payments.store');
 
     Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
-    // [BARU] Rute untuk mengelola pembayaran utang
     Route::get('debts/{purchase}/manage', [DebtController::class, 'manage'])->name('debts.manage');
     Route::post('debts/{purchase}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store');
+
+    // [2. TAMBAHKAN INI] Manajemen Biaya
+    Route::resource('expenses', ExpenseController::class);
 });
 
 // Rute untuk ADMIN, MANAGER, dan STAF
