@@ -6,6 +6,9 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+// [BARU V1.10.0] Import class yang diperlukan untuk kompresi gambar
+use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Str;
 
 class ExpenseController extends Controller
 {
@@ -42,8 +45,13 @@ class ExpenseController extends Controller
         ]);
 
         $attachmentPath = null;
+        // [MODIFIKASI V1.10.0] Logika kompresi gambar saat membuat data baru
         if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            $image = $request->file('attachment');
+            $fileName = time() . '_' . Str::random(10) . '.webp';
+            $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+            Storage::disk('public')->put('expense_attachments/' . $fileName, (string) $imageCompressed);
+            $attachmentPath = 'expense_attachments/' . $fileName;
         }
 
         Expense::create([
@@ -83,12 +91,18 @@ class ExpenseController extends Controller
         ]);
 
         $attachmentPath = $expense->attachment_path;
+        // [MODIFIKASI V1.10.0] Logika kompresi gambar saat memperbarui data
         if ($request->hasFile('attachment')) {
             // Hapus file lama jika ada
             if ($expense->attachment_path) {
                 Storage::disk('public')->delete($expense->attachment_path);
             }
-            $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            // Proses dan simpan file baru yang sudah dikompresi
+            $image = $request->file('attachment');
+            $fileName = time() . '_' . Str::random(10) . '.webp';
+            $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+            Storage::disk('public')->put('expense_attachments/' . $fileName, (string) $imageCompressed);
+            $attachmentPath = 'expense_attachments/' . $fileName;
         }
 
         $expense->update([

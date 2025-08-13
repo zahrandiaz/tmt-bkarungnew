@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\Purchase;
 use App\Models\Product;
-use App\Models\SaleDetail;
-use App\Models\Expense; // <-- [1. TAMBAHKAN INI]
+use App\Models\Expense;
 use Carbon\Carbon;
 use App\Exports\SalesExport;
 use App\Exports\PurchasesExport;
@@ -16,40 +15,78 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
-    // ... (method salesReport, purchasesReport, stockReport tetap sama) ...
+    /**
+     * [BARU V1.10.0] Method privat untuk menentukan rentang tanggal dari parameter.
+     */
+    private function getDateRange(Request $request)
+    {
+        // Prioritaskan filter cepat
+        if ($request->has('period')) {
+            $period = $request->input('period');
+            switch ($period) {
+                case 'today':
+                    return [Carbon::today(), Carbon::today()];
+                case 'this_week':
+                    return [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()];
+                case 'this_month':
+                    return [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()];
+                case 'this_year':
+                    return [Carbon::now()->startOfYear(), Carbon::now()->endOfYear()];
+                default:
+                    return [null, null];
+            }
+        }
+
+        // Jika tidak ada filter cepat, gunakan filter manual
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = Carbon::parse($request->input('start_date'));
+            $endDate = Carbon::parse($request->input('end_date'));
+            return [$startDate, $endDate];
+        }
+        
+        // Default jika tidak ada filter sama sekali: hari ini
+        return [Carbon::today(), Carbon::today()];
+    }
+
     public function salesReport(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
+        [$startDate, $endDate] = $this->getDateRange($request);
+
         $salesQuery = Sale::withTrashed()->with('customer');
+        
         if ($startDate && $endDate) {
-            $start = Carbon::parse($startDate)->startOfDay();
-            $end = Carbon::parse($endDate)->endOfDay();
-            $salesQuery->whereBetween('created_at', [$start, $end]);
+            $salesQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
+        
         $sales = $salesQuery->latest()->paginate(10)->appends($request->query());
+
         return view('reports.sales', [
             'sales' => $sales,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
+            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
+            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
         ]);
     }
 
     public function purchasesReport(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
+        [$startDate, $endDate] = $this->getDateRange($request);
+        
         $purchasesQuery = Purchase::withTrashed()->with('supplier');
+        
         if ($startDate && $endDate) {
-            $start = Carbon::parse($startDate)->startOfDay();
-            $end = Carbon::parse($endDate)->endOfDay();
-            $purchasesQuery->whereBetween('created_at', [$start, $end]);
+            $purchasesQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
+        
         $purchases = $purchasesQuery->latest()->paginate(10)->appends($request->query());
+        
         return view('reports.purchases', [
             'purchases' => $purchases,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
+            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
+            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
         ]);
     }
 
@@ -63,28 +100,21 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * [DIROMBAK] Menampilkan laporan laba rugi lengkap.
-     */
     public function profitAndLossReport(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-
-        // Inisialisasi query builder
-        $salesQuery = Sale::query()->where('payment_status', 'lunas'); // Hanya hitung yang lunas
+        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
+        [$startDate, $endDate] = $this->getDateRange($request);
+        
+        $salesQuery = Sale::query()->where('payment_status', 'Lunas');
         $expensesQuery = Expense::query();
 
-        // Terapkan filter tanggal jika ada
         if ($startDate && $endDate) {
-            $start = Carbon::parse($startDate)->startOfDay();
-            $end = Carbon::parse($endDate)->endOfDay();
-            $salesQuery->whereBetween('sale_date', [$start, $end]);
-            $expensesQuery->whereBetween('expense_date', [$start, $end]);
+            $startOfDay = $startDate->copy()->startOfDay();
+            $endOfDay = $endDate->copy()->endOfDay();
+            $salesQuery->whereBetween('sale_date', [$startOfDay, $endOfDay]);
+            $expensesQuery->whereBetween('expense_date', [$startOfDay, $endOfDay]);
         }
 
-        // Hitung Total Pendapatan
-        // Note: Ini masih menggunakan pendekatan HPP Sederhana. Nanti bisa kita tingkatkan.
         $totalRevenue = 0;
         $totalCostOfGoods = 0;
         foreach ($salesQuery->with('details.product')->get() as $sale) {
@@ -96,16 +126,15 @@ class ReportController extends Controller
             }
         }
 
-        // Hitung Total Biaya Operasional
         $totalExpenses = $expensesQuery->sum('amount');
         
-        // Kalkulasi Final
         $grossProfit = $totalRevenue - $totalCostOfGoods;
         $netProfit = $grossProfit - $totalExpenses;
 
         return view('reports.profit_and_loss', [
-            'startDate' => $startDate,
-            'endDate' => $endDate,
+            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
+            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
             'totalRevenue' => $totalRevenue,
             'totalCostOfGoods' => $totalCostOfGoods,
             'grossProfit' => $grossProfit,
