@@ -95,10 +95,14 @@ class ProductController extends Controller
                 $query->where('name', 'like', "%{$searchTerm}%")
                       ->orWhere('sku', 'like', "%{$searchTerm}%");
             })
-            ->select('id', 'name', 'selling_price', 'stock')
+            // [FIX] Tambahkan 'sku' ke dalam select statement
+            ->select('id', 'name', 'selling_price', 'stock', 'sku') 
             ->limit(20)
             ->get();
-        return response()->json($products);
+
+        // [FIX] Mengubah format respons agar konsisten dengan form transaksi
+        // yang mungkin mengharapkan objek 'products'.
+        return response()->json(['products' => $products]);
     }
 
     /**
