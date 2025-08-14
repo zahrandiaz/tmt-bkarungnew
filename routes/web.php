@@ -61,6 +61,10 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
     Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss');
 
+    // API untuk detail laporan interaktif
+    Route::get('/api/reports/sale-details/{id}', [ReportController::class, 'getSaleDetails'])->name('api.reports.sale-details');
+    Route::get('/api/reports/purchase-details/{id}', [ReportController::class, 'getPurchaseDetails'])->name('api.reports.purchase-details');
+
     // Ekspor
     Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export');
     Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export');
