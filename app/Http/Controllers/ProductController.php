@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductType;
-use Illuminate\Http\Request;
+use Illuminate\Http\Request; // [MODIFIKASI V1.14.0] Tambahkan Request
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -15,11 +15,25 @@ use Intervention\Image\Laravel\Facades\Image;
 
 class ProductController extends Controller
 {
-    // ... (method index, create, store, edit, update, destroy tetap sama) ...
-    public function index()
+    /**
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     */
+    public function index(Request $request)
     {
-        $products = Product::with(['category', 'type'])->paginate(10);
-        return view('products.index', compact('products'));
+        $search = $request->input('search');
+
+        $productsQuery = Product::with(['category', 'type']);
+
+        if ($search) {
+            $productsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $productsQuery->paginate(10)->appends(['search' => $search]);
+
+        return view('products.index', compact('products', 'search'));
     }
 
     public function create()
@@ -84,9 +98,6 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');
     }
 
-    /**
-     * Method untuk mencari produk via API.
-     */
     public function search(Request $request)
     {
         $searchTerm = $request->query('q', '');
@@ -95,26 +106,20 @@ class ProductController extends Controller
                 $query->where('name', 'like', "%{$searchTerm}%")
                       ->orWhere('sku', 'like', "%{$searchTerm}%");
             })
-            // [FIX] Tambahkan 'sku' ke dalam select statement
             ->select('id', 'name', 'selling_price', 'stock', 'sku') 
             ->limit(20)
             ->get();
 
-        // [FIX] Mengubah format respons agar konsisten dengan form transaksi
-        // yang mungkin mengharapkan objek 'products'.
         return response()->json(['products' => $products]);
     }
 
-    /**
-     * [BARU] Method untuk mengambil produk bergambar via API untuk galeri.
-     */
     public function gallery(Request $request)
     {
         $products = Product::where('is_active', true)
-            ->whereNotNull('image_path') // Hanya ambil produk yang punya gambar
+            ->whereNotNull('image_path')
             ->select('id', 'name', 'selling_price', 'stock', 'image_path')
-            ->latest() // Urutkan dari yang terbaru
-            ->paginate(12); // Paginasi, 12 produk per halaman
+            ->latest()
+            ->paginate(12);
 
         return response()->json($products);
     }

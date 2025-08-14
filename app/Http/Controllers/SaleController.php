@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
-// [BARU V1.12.0] Import model PurchaseDetail
 use App\Models\PurchaseDetail;
 use App\Http\Requests\StoreSaleRequest;
 use Illuminate\Http\Request;
@@ -14,17 +13,34 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SaleController extends Controller
 {
+    /**
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     */
     public function index(Request $request)
     {
         $status = $request->query('status');
+        $search = $request->query('search');
+        
         $query = Sale::query();
+
         if ($status == 'dibatalkan') {
             $query->onlyTrashed();
         } elseif ($status == 'semua') {
             $query->withTrashed();
         }
-        $sales = $query->with('customer')->latest()->paginate(10);
-        return view('sales.index', compact('sales'));
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('invoice_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function ($subQuery) use ($search) {
+                      $subQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        $sales = $query->with('customer')->latest()->paginate(10)->appends($request->query());
+        
+        return view('sales.index', compact('sales', 'search'));
     }
 
     public function create()
@@ -33,14 +49,12 @@ class SaleController extends Controller
         return view('sales.create', compact('customers'));
     }
 
-    // [MODIFIKASI V1.12.0] Rombak total logika penyimpanan detail penjualan
     public function store(StoreSaleRequest $request)
     {
         $validatedData = $request->validated();
 
         try {
             DB::transaction(function () use ($validatedData, $request) {
-                // Bagian header penjualan (tetap sama)
                 $totalAmount = $validatedData['total_amount'];
                 $paymentStatusRaw = $validatedData['payment_status'];
                 $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw));
@@ -67,33 +81,26 @@ class SaleController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
-                // [LOGIKA BARU] Simpan detail item penjualan dengan HPP riil
                 foreach ($validatedData['items'] as $item) {
                     $product = Product::find($item['product_id']);
-                    if (!$product) continue; // Lewati jika produk tidak ditemukan
+                    if (!$product) continue;
 
-                    // Cari harga beli terakhir sebelum tanggal penjualan
                     $lastPurchaseDetail = PurchaseDetail::where('product_id', $product->id)
                         ->whereHas('purchase', function ($query) use ($sale) {
                             $query->where('purchase_date', '<=', $sale->sale_date);
                         })
-                        ->latest('created_at') // Urutkan berdasarkan kapan record dibuat
+                        ->latest('created_at')
                         ->first();
 
-                    // Tentukan HPP yang akan dicatat
-                    // Jika ada riwayat pembelian, gunakan harganya.
-                    // Jika tidak ada (misal, stok awal), gunakan harga beli dari master produk sebagai fallback.
                     $hppToRecord = $lastPurchaseDetail ? $lastPurchaseDetail->purchase_price : $product->purchase_price;
 
-                    // Simpan detail penjualan dengan HPP yang sudah ditemukan
                     $sale->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'sale_price' => $item['sale_price'],
-                        'purchase_price' => $hppToRecord, // <-- Kolom baru diisi di sini
+                        'purchase_price' => $hppToRecord,
                     ]);
 
-                    // Kurangi stok produk
                     $product->decrement('stock', $item['quantity']);
                 }
             });

@@ -5,14 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Supplier;
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
-// Hapus 'use Illuminate\Http\Request;' karena tidak digunakan
+use Illuminate\Http\Request; // [BARU V1.14.0] Import Request
 
 class SupplierController extends Controller
 {
-    public function index()
+    /**
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     */
+    public function index(Request $request)
     {
-        $suppliers = Supplier::latest()->paginate(10);
-        return view('suppliers.index', compact('suppliers'));
+        $search = $request->input('search');
+
+        $suppliersQuery = Supplier::query();
+
+        if ($search) {
+            $suppliersQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $suppliers = $suppliersQuery->latest()->paginate(10)->appends(['search' => $search]);
+
+        return view('suppliers.index', compact('suppliers', 'search'));
     }
 
     public function create()
@@ -42,10 +57,8 @@ class SupplierController extends Controller
         return redirect()->route('suppliers.index')->with('success', 'Data supplier berhasil diperbarui.');
     }
 
-    // [MODIFIKASI] Tambahkan validasi sebelum hapus
     public function destroy(Supplier $supplier)
     {
-        // Cek apakah supplier ini memiliki transaksi pembelian terkait
         if ($supplier->purchases()->exists()) {
             return redirect()->route('suppliers.index')->with('error', 'Supplier tidak dapat dihapus karena sudah memiliki riwayat transaksi.');
         }

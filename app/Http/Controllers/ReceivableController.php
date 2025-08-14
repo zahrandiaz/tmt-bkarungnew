@@ -6,18 +6,19 @@ use App\Models\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-// [BARU V1.10.0] Import class yang diperlukan untuk kompresi gambar
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Str;
 
 class ReceivableController extends Controller
 {
     /**
-     * Menampilkan daftar semua piutang berdasarkan status.
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
      */
     public function index(Request $request)
     {
         $status = $request->query('status', 'belum lunas'); 
+        $search = $request->query('search');
+
         $query = Sale::query();
 
         if ($status == 'lunas') {
@@ -25,10 +26,19 @@ class ReceivableController extends Controller
         } else {
             $query->where('payment_status', 'Belum Lunas');
         }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('invoice_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function ($subQuery) use ($search) {
+                      $subQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
         
         $receivables = $query->with('customer')->latest()->paginate(10)->withQueryString();
 
-        return view('receivables.index', compact('receivables'));
+        return view('receivables.index', compact('receivables', 'search'));
     }
 
     /**
@@ -54,7 +64,6 @@ class ReceivableController extends Controller
         ]);
 
         $remainingAmount = $sale->total_amount - $sale->total_paid;
-        // Tambahkan toleransi kecil untuk masalah floating point
         if ($validated['amount'] > $remainingAmount + 0.001) {
             return back()->with('error', 'Jumlah pembayaran melebihi sisa tagihan.');
         }
@@ -63,15 +72,11 @@ class ReceivableController extends Controller
             DB::transaction(function () use ($validated, $sale, $request) {
                 $attachmentPath = null;
 
-                // [MODIFIKASI V1.10.0] Logika kompresi gambar
                 if ($request->hasFile('attachment')) {
                     $image = $request->file('attachment');
-                    // Buat nama file unik dengan format webp
                     $fileName = time() . '_' . Str::random(10) . '.webp';
-                    // Kompresi dan simpan gambar
                     $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
                     Storage::disk('public')->put('payment_proofs/' . $fileName, (string) $imageCompressed);
-                    // Simpan path yang benar
                     $attachmentPath = 'payment_proofs/' . $fileName;
                 }
 
@@ -86,7 +91,6 @@ class ReceivableController extends Controller
 
                 $sale->total_paid += $validated['amount'];
 
-                // Gunakan perbandingan dengan toleransi untuk menghindari masalah floating point
                 if ($sale->total_paid >= $sale->total_amount - 0.001) {
                     $sale->payment_status = 'Lunas';
                 }
@@ -94,7 +98,6 @@ class ReceivableController extends Controller
                 $sale->save();
             });
 
-            // Sesuaikan pesan dan pengalihan berdasarkan status pembayaran
             if($sale->payment_status == 'Lunas') {
                 return redirect()->route('receivables.index', ['status' => 'lunas'])->with('success', 'Pembayaran berhasil dicatat. Piutang telah lunas.');
             }

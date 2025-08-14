@@ -6,18 +6,19 @@ use App\Models\Purchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-// [BARU V1.10.0] Import class yang diperlukan untuk kompresi gambar
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Str;
 
 class DebtController extends Controller
 {
     /**
-     * Menampilkan daftar semua utang (pembelian yang belum lunas).
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
      */
     public function index(Request $request)
     {
-        $status = $request->query('status', 'belum lunas'); // Default ke 'belum lunas'
+        $status = $request->query('status', 'belum lunas');
+        $search = $request->query('search');
+
         $query = Purchase::query();
 
         if ($status == 'lunas') {
@@ -26,9 +27,18 @@ class DebtController extends Controller
             $query->where('payment_status', 'Belum Lunas');
         }
 
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('purchase_code', 'like', "%{$search}%")
+                  ->orWhereHas('supplier', function ($subQuery) use ($search) {
+                      $subQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         $debts = $query->with('supplier')->latest()->paginate(10)->withQueryString();
 
-        return view('debts.index', compact('debts'));
+        return view('debts.index', compact('debts', 'search'));
     }
 
     /**
@@ -54,7 +64,6 @@ class DebtController extends Controller
         ]);
 
         $remainingAmount = $purchase->total_amount - $purchase->total_paid;
-        // Tambahkan toleransi kecil untuk masalah floating point
         if ($validated['amount'] > $remainingAmount + 0.001) {
             return back()->with('error', 'Jumlah pembayaran melebihi sisa tagihan.');
         }
@@ -63,15 +72,11 @@ class DebtController extends Controller
             DB::transaction(function () use ($validated, $purchase, $request) {
                 $attachmentPath = null;
                 
-                // [MODIFIKASI V1.10.0] Logika kompresi gambar
                 if ($request->hasFile('attachment')) {
                     $image = $request->file('attachment');
-                    // Buat nama file unik dengan format webp
                     $fileName = time() . '_' . Str::random(10) . '.webp';
-                    // Kompresi dan simpan gambar
                     $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
                     Storage::disk('public')->put('payment_proofs/' . $fileName, (string) $imageCompressed);
-                    // Simpan path yang benar
                     $attachmentPath = 'payment_proofs/' . $fileName;
                 }
 
@@ -86,7 +91,6 @@ class DebtController extends Controller
 
                 $purchase->total_paid += $validated['amount'];
 
-                // Gunakan perbandingan dengan toleransi untuk menghindari masalah floating point
                 if ($purchase->total_paid >= $purchase->total_amount - 0.001) {
                     $purchase->payment_status = 'Lunas';
                 }
@@ -94,7 +98,6 @@ class DebtController extends Controller
                 $purchase->save();
             });
 
-            // Jika lunas, arahkan kembali ke daftar utang lunas
             if($purchase->payment_status == 'Lunas') {
                 return redirect()->route('debts.index', ['status' => 'lunas'])->with('success', 'Pembayaran berhasil dicatat. Utang telah lunas.');
             }
