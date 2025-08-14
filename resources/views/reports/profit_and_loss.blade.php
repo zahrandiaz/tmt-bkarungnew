@@ -7,7 +7,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- [MODIFIKASI V1.10.0] Form Filter dengan Tombol Cepat -->
+            <!-- Form Filter -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900">
                     <h3 class="font-semibold mb-4">Filter Laporan</h3>
@@ -64,14 +64,31 @@
                         </p>
                     </div>
                 </div>
-                {{-- Bagian Biaya & Laba Bersih --}}
-                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {{-- [MODIFIKASI V1.11.0] Bagian Biaya dengan Rincian --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold text-gray-700">Total Biaya Operasional</h3>
                         <p class="mt-2 text-3xl font-bold text-red-600">
                            - Rp {{ number_format($totalExpenses, 0, ',', '.') }}
                         </p>
+                        
+                        {{-- Tabel Rincian Biaya --}}
+                        @if($expensesByCategory->isNotEmpty())
+                            <div class="mt-4 pt-4 border-t">
+                                <h4 class="text-md font-semibold text-gray-600 mb-2">Rincian Biaya:</h4>
+                                <div class="space-y-1 text-sm">
+                                    @foreach($expensesByCategory as $expenseDetail)
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-500">{{ $expenseDetail->category->name ?? 'Tanpa Kategori' }}</span>
+                                            <span class="font-medium text-gray-700">Rp {{ number_format($expenseDetail->total_amount, 0, ',', '.') }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
+                    
                     <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md border-l-4 {{ $netProfit >= 0 ? 'border-green-500' : 'border-red-500' }}">
                         <h3 class="text-xl font-semibold text-gray-700">Laba Bersih</h3>
                         <p class="mt-2 text-4xl font-bold {{ $netProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">

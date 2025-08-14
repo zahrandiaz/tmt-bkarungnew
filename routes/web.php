@@ -15,7 +15,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\ExpenseController; // <-- [1. TAMBAHKAN INI]
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PriceAdjustmentController;
 use App\Http\Controllers\StockAdjustmentController;
 
@@ -78,7 +78,7 @@ Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
     // Manajemen Biaya
     Route::resource('expenses', ExpenseController::class);
 
-    // Penyesuaian Harga
+    // Penyesuaian Harga Jual
     Route::get('price-adjustments', [PriceAdjustmentController::class, 'index'])->name('price-adjustments.index');
     Route::post('price-adjustments', [PriceAdjustmentController::class, 'store'])->name('price-adjustments.store');
 
