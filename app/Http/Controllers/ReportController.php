@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\Purchase;
+// [BARU V1.15.0] Import PurchaseDetail
+use App\Models\PurchaseDetail;
 use App\Models\Product;
 use App\Models\Expense;
 use Carbon\Carbon;
@@ -48,18 +50,16 @@ class ReportController extends Controller
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        $salesQuery = Sale::query()->with('customer'); // [MODIFIKASI V1.13.0] Hapus withTrashed untuk kalkulasi statistik
+        $salesQuery = Sale::query()->with('customer');
         
         if ($startDate && $endDate) {
             $salesQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
 
-        // [BARU V1.13.0] Kalkulasi Statistik
-        $statsQuery = (clone $salesQuery); // Clone query sebelum paginasi
+        $statsQuery = (clone $salesQuery);
         $totalTransactions = $statsQuery->count();
         $totalRevenue = $statsQuery->sum('total_amount');
 
-        // Kalkulasi HPP dari sale_details yang terkait
         $totalCogs = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
             if ($startDate && $endDate) {
                 $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
@@ -68,12 +68,23 @@ class ReportController extends Controller
         
         $grossProfit = $totalRevenue - $totalCogs;
 
-        // Ambil data untuk tabel dengan paginasi (termasuk yang dibatalkan)
-        $tableQuery = Sale::withTrashed()->with('customer');
+        $tableQuery = Sale::withTrashed()->with(['customer', 'details']);
         if ($startDate && $endDate) {
             $tableQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
         $sales = $tableQuery->latest()->paginate(10)->appends($request->query());
+
+        // [BARU V1.15.0] Hitung laba untuk setiap transaksi yang ditampilkan
+        foreach ($sales as $sale) {
+            if (!$sale->trashed()) { // Hanya hitung laba untuk transaksi yang tidak dibatalkan
+                $totalHpp = $sale->details->sum(function ($detail) {
+                    return $detail->quantity * $detail->purchase_price;
+                });
+                $sale->profit = $sale->total_amount - $totalHpp;
+            } else {
+                $sale->profit = 0;
+            }
+        }
 
         return view('reports.sales', [
             'sales' => $sales,
@@ -91,18 +102,16 @@ class ReportController extends Controller
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        $purchasesQuery = Purchase::query(); // [MODIFIKASI V1.13.0] Hapus withTrashed untuk kalkulasi statistik
+        $purchasesQuery = Purchase::query();
 
         if ($startDate && $endDate) {
             $purchasesQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
 
-        // [BARU V1.13.0] Kalkulasi Statistik
         $statsQuery = (clone $purchasesQuery);
         $totalTransactions = $statsQuery->count();
         $totalExpenditure = $statsQuery->sum('total_amount');
         
-        // Ambil data untuk tabel dengan paginasi (termasuk yang dibatalkan)
         $tableQuery = Purchase::withTrashed()->with('supplier');
         if ($startDate && $endDate) {
             $tableQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
@@ -178,6 +187,26 @@ class ReportController extends Controller
             'netProfit' => $netProfit,
             'expensesByCategory' => $expensesByCategory,
         ]);
+    }
+    
+    // [BARU V1.15.0] Method untuk API detail penjualan
+    public function getSaleDetails($id)
+    {
+        $sale = Sale::withTrashed()->with('details.product')->find($id);
+        if (!$sale) {
+            return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
+        }
+        return response()->json($sale->details);
+    }
+
+    // [BARU V1.15.0] Method untuk API detail pembelian
+    public function getPurchaseDetails($id)
+    {
+        $purchase = Purchase::withTrashed()->with('details.product')->find($id);
+        if (!$purchase) {
+            return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
+        }
+        return response()->json($purchase->details);
     }
 
     public function exportSales(Request $request)
