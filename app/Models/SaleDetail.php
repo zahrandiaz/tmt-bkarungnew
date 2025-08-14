@@ -15,6 +15,7 @@ class SaleDetail extends Model
         'product_id',
         'quantity',
         'sale_price',
+        'purchase_price', // <-- [TAMBAHKAN BARIS INI]
     ];
 
     /**
