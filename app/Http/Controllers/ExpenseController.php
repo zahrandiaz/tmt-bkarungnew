@@ -6,19 +6,27 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-// [BARU V1.10.0] Import class yang diperlukan untuk kompresi gambar
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Str;
 
 class ExpenseController extends Controller
 {
     /**
-     * Menampilkan daftar semua biaya.
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $expenses = Expense::with('category')->latest()->paginate(10);
-        return view('expenses.index', compact('expenses'));
+        $search = $request->input('search');
+
+        $expensesQuery = Expense::with('category');
+
+        if ($search) {
+            $expensesQuery->where('name', 'like', "%{$search}%");
+        }
+
+        $expenses = $expensesQuery->latest()->paginate(10)->appends(['search' => $search]);
+        
+        return view('expenses.index', compact('expenses', 'search'));
     }
 
     /**
@@ -45,7 +53,6 @@ class ExpenseController extends Controller
         ]);
 
         $attachmentPath = null;
-        // [MODIFIKASI V1.10.0] Logika kompresi gambar saat membuat data baru
         if ($request->hasFile('attachment')) {
             $image = $request->file('attachment');
             $fileName = time() . '_' . Str::random(10) . '.webp';
@@ -91,13 +98,10 @@ class ExpenseController extends Controller
         ]);
 
         $attachmentPath = $expense->attachment_path;
-        // [MODIFIKASI V1.10.0] Logika kompresi gambar saat memperbarui data
         if ($request->hasFile('attachment')) {
-            // Hapus file lama jika ada
             if ($expense->attachment_path) {
                 Storage::disk('public')->delete($expense->attachment_path);
             }
-            // Proses dan simpan file baru yang sudah dikompresi
             $image = $request->file('attachment');
             $fileName = time() . '_' . Str::random(10) . '.webp';
             $imageCompressed = Image::read($image->getRealPath())->toWebp(75);

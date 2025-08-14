@@ -22,13 +22,22 @@
                         </div>
                     @endif
 
-                    @hasanyrole('Admin|Manager')
-                    <div class="mb-4">
-                        <a href="{{ route('customers.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                            Tambah Pelanggan
-                        </a>
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        @hasanyrole('Admin|Manager')
+                            <a href="{{ route('customers.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 w-full sm:w-auto">
+                                Tambah Pelanggan
+                            </a>
+                        @endhasanyrole
+                        <!-- [BARU V1.14.0] Form Pencarian -->
+                        <form action="{{ route('customers.index') }}" method="GET" class="w-full sm:w-auto sm:max-w-xs ml-auto">
+                            <div class="flex items-center">
+                                <input type="text" name="search" placeholder="Cari nama/telepon..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value="{{ $search ?? '' }}">
+                                <button type="submit" class="ml-2 inline-flex items-center justify-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                                    Cari
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    @endhasanyrole
 
                     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
@@ -57,13 +66,11 @@
                                     @hasanyrole('Admin|Manager')
                                     <td class="px-6 py-4">
                                         <div class="flex space-x-2">
-                                            {{-- [MODIFIKASI] Mengubah gaya tombol Edit --}}
                                             <a href="{{ route('customers.edit', $customer->id) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
                                             
                                             <form method="POST" action="{{ route('customers.destroy', $customer->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pelanggan ini?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                {{-- [MODIFIKASI] Mengubah gaya tombol Hapus --}}
                                                 <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Hapus</button>
                                             </form>
                                         </div>
@@ -73,7 +80,11 @@
                                 @empty
                                 <tr class="bg-white border-b">
                                     <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '4' : '3' }}" class="px-6 py-4 text-center">
-                                        Tidak ada data.
+                                        @if ($search)
+                                            Pelanggan dengan kata kunci "{{ $search }}" tidak ditemukan.
+                                        @else
+                                            Tidak ada data.
+                                        @endif
                                     </td>
                                 </tr>
                                 @endforelse

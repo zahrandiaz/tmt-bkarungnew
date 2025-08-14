@@ -10,22 +10,32 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     
-                    {{-- [BARU] Navigasi Tab --}}
                     <div class="mb-4 border-b border-gray-200">
-                        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
-                            <li class="me-2">
-                                <a href="{{ route('debts.index', ['status' => 'belum lunas']) }}" 
-                                   class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status', 'belum lunas') == 'belum lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
-                                   Belum Lunas
-                                </a>
-                            </li>
-                            <li class="me-2">
-                                <a href="{{ route('debts.index', ['status' => 'lunas']) }}" 
-                                   class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status') == 'lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
-                                   Lunas
-                                </a>
-                            </li>
-                        </ul>
+                         <div class="flex flex-col sm:flex-row justify-between items-center pb-4 gap-4">
+                            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+                                <li class="me-2">
+                                    <a href="{{ route('debts.index', ['status' => 'belum lunas']) }}" 
+                                       class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status', 'belum lunas') == 'belum lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                       Belum Lunas
+                                    </a>
+                                </li>
+                                <li class="me-2">
+                                    <a href="{{ route('debts.index', ['status' => 'lunas']) }}" 
+                                       class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status') == 'lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                       Lunas
+                                    </a>
+                                </li>
+                            </ul>
+                            <form action="{{ route('debts.index') }}" method="GET" class="w-full sm:w-auto sm:max-w-xs">
+                                <input type="hidden" name="status" value="{{ request('status', 'belum lunas') }}">
+                                <div class="flex items-center">
+                                    <input type="text" name="search" placeholder="Cari kode/supplier..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value="{{ $search ?? '' }}">
+                                    <button type="submit" class="ml-2 inline-flex items-center justify-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                                        Cari
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     @if (session('success'))
@@ -44,7 +54,6 @@
                                     <th scope="col" class="px-6 py-3">Tanggal Pembelian</th>
                                     <th scope="col" class="px-6 py-3 text-right">Total Tagihan</th>
                                     <th scope="col" class="px-6 py-3 text-right">Sudah Dibayar</th>
-                                    {{-- [UBAH] Tampilkan Sisa Tagihan hanya jika status belum lunas --}}
                                     @if(request('status', 'belum lunas') == 'belum lunas')
                                     <th scope="col" class="px-6 py-3 text-right">Sisa Tagihan</th>
                                     @endif
@@ -64,7 +73,6 @@
                                         <td class="px-6 py-4">{{ \Carbon\Carbon::parse($purchase->purchase_date)->format('d-m-Y H:i') }}</td>
                                         <td class="px-6 py-4 text-right">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
                                         <td class="px-6 py-4 text-right">Rp {{ number_format($purchase->total_paid, 0, ',', '.') }}</td>
-                                        {{-- [UBAH] Tampilkan Sisa Tagihan hanya jika status belum lunas --}}
                                         @if(request('status', 'belum lunas') == 'belum lunas')
                                         <td class="px-6 py-4 text-right font-bold text-red-600">
                                             Rp {{ number_format($purchase->total_amount - $purchase->total_paid, 0, ',', '.') }}
@@ -77,7 +85,11 @@
                                 @empty
                                     <tr class="bg-white border-b">
                                         <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                            Tidak ada data utang untuk status ini.
+                                            @if ($search)
+                                                Utang dengan kata kunci "{{ $search }}" tidak ditemukan.
+                                            @else
+                                                Tidak ada data utang untuk status ini.
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforelse

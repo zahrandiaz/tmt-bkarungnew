@@ -5,14 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
-// Hapus 'use Illuminate\Http\Request;' karena tidak digunakan
+use Illuminate\Http\Request; // [BARU V1.14.0] Import Request
 
 class CustomerController extends Controller
 {
-    public function index()
+    /**
+     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     */
+    public function index(Request $request)
     {
-        $customers = Customer::latest()->paginate(10);
-        return view('customers.index', compact('customers'));
+        $search = $request->input('search');
+
+        $customersQuery = Customer::query();
+
+        if ($search) {
+            $customersQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $customersQuery->latest()->paginate(10)->appends(['search' => $search]);
+
+        return view('customers.index', compact('customers', 'search'));
     }
 
     public function create()
@@ -42,10 +57,8 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Data pelanggan berhasil diperbarui.');
     }
 
-    // [MODIFIKASI] Tambahkan validasi sebelum hapus
     public function destroy(Customer $customer)
     {
-        // Cek apakah pelanggan ini memiliki transaksi penjualan terkait
         if ($customer->sales()->exists()) {
             return redirect()->route('customers.index')->with('error', 'Pelanggan tidak dapat dihapus karena sudah memiliki riwayat transaksi.');
         }
