@@ -12,6 +12,7 @@ use App\Exports\SalesExport;
 use App\Exports\PurchasesExport;
 use App\Exports\StockExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB; // [BARU V1.11.0] Import DB Facade
 
 class ReportController extends Controller
 {
@@ -50,7 +51,6 @@ class ReportController extends Controller
 
     public function salesReport(Request $request)
     {
-        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
         [$startDate, $endDate] = $this->getDateRange($request);
 
         $salesQuery = Sale::withTrashed()->with('customer');
@@ -65,13 +65,12 @@ class ReportController extends Controller
             'sales' => $sales,
             'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
             'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
-            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
         ]);
     }
 
     public function purchasesReport(Request $request)
     {
-        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
         [$startDate, $endDate] = $this->getDateRange($request);
         
         $purchasesQuery = Purchase::withTrashed()->with('supplier');
@@ -86,7 +85,7 @@ class ReportController extends Controller
             'purchases' => $purchases,
             'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
             'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
-            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
         ]);
     }
 
@@ -100,13 +99,14 @@ class ReportController extends Controller
         ]);
     }
 
+    // [MODIFIKASI V1.11.0] Tambahkan logika untuk mengambil rincian biaya
     public function profitAndLossReport(Request $request)
     {
-        // [MODIFIKASI V1.10.0] Gunakan method baru untuk mendapatkan rentang tanggal
         [$startDate, $endDate] = $this->getDateRange($request);
         
         $salesQuery = Sale::query()->where('payment_status', 'Lunas');
-        $expensesQuery = Expense::query();
+        // Penting: Clone query sebelum digunakan untuk agregasi agar filter tetap bisa dipakai
+        $expensesQuery = Expense::query(); 
 
         if ($startDate && $endDate) {
             $startOfDay = $startDate->copy()->startOfDay();
@@ -126,20 +126,28 @@ class ReportController extends Controller
             }
         }
 
+        // Hitung total biaya
         $totalExpenses = $expensesQuery->sum('amount');
         
+        // [LOGIKA BARU] Ambil rincian biaya per kategori
+        $expensesByCategory = $expensesQuery->with('category')
+            ->select('expense_category_id', DB::raw('SUM(amount) as total_amount'))
+            ->groupBy('expense_category_id')
+            ->get();
+
         $grossProfit = $totalRevenue - $totalCostOfGoods;
         $netProfit = $grossProfit - $totalExpenses;
 
         return view('reports.profit_and_loss', [
             'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
             'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
-            'period' => $request->input('period', $request->has('start_date') ? null : 'today'), // Untuk menandai tombol aktif
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
             'totalRevenue' => $totalRevenue,
             'totalCostOfGoods' => $totalCostOfGoods,
             'grossProfit' => $grossProfit,
             'totalExpenses' => $totalExpenses,
             'netProfit' => $netProfit,
+            'expensesByCategory' => $expensesByCategory, // Kirim data rincian ke view
         ]);
     }
 
