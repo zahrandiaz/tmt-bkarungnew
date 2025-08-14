@@ -7,12 +7,26 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- [MODIFIKASI V1.10.0] Form Filter dengan Tombol Cepat -->
+
+            <!-- [BARU V1.13.0] Kartu Statistik -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Jumlah Transaksi -->
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="text-sm font-medium text-gray-500">Jumlah Transaksi</h3>
+                    <p class="mt-2 text-3xl font-semibold text-gray-900">{{ number_format($totalTransactions, 0, ',', '.') }}</p>
+                </div>
+                <!-- Total Pengeluaran -->
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="text-sm font-medium text-gray-500">Total Pengeluaran</h3>
+                    <p class="mt-2 text-3xl font-semibold text-gray-900">Rp {{ number_format($totalExpenditure, 0, ',', '.') }}</p>
+                </div>
+            </div>
+
+            <!-- Form Filter -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900">
                     <h3 class="font-semibold mb-4">Filter Laporan</h3>
                     
-                    <!-- Tombol Filter Cepat -->
                     <div class="flex items-center space-x-2 mb-4">
                         <a href="{{ route('reports.purchases', ['period' => 'today']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'today' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Hari Ini</a>
                         <a href="{{ route('reports.purchases', ['period' => 'this_week']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'this_week' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Minggu Ini</a>
@@ -20,7 +34,6 @@
                         <a href="{{ route('reports.purchases', ['period' => 'this_year']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'this_year' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Tahun Ini</a>
                     </div>
 
-                    <!-- Filter Manual -->
                     <form action="{{ route('reports.purchases') }}" method="GET">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
@@ -62,7 +75,6 @@
                                 @forelse ($purchases as $purchase)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $purchase->purchase_code }}</td>
-                                        {{-- [PERBAIKAN V1.10.0] Gunakan purchase_date --}}
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ \Carbon\Carbon::parse($purchase->purchase_date)->isoFormat('D MMM YYYY, HH:mm') }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $purchase->supplier->name ?? 'N/A' }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>

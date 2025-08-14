@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Sale;
-use App\Models\SaleDetail; // [BARU V1.12.0] Import SaleDetail
+use App\Models\SaleDetail;
 use App\Models\Purchase;
 use App\Models\Product;
 use App\Models\Expense;
@@ -47,32 +47,75 @@ class ReportController extends Controller
     public function salesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        $salesQuery = Sale::withTrashed()->with('customer');
+        
+        $salesQuery = Sale::query()->with('customer'); // [MODIFIKASI V1.13.0] Hapus withTrashed untuk kalkulasi statistik
+        
         if ($startDate && $endDate) {
             $salesQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
-        $sales = $salesQuery->latest()->paginate(10)->appends($request->query());
+
+        // [BARU V1.13.0] Kalkulasi Statistik
+        $statsQuery = (clone $salesQuery); // Clone query sebelum paginasi
+        $totalTransactions = $statsQuery->count();
+        $totalRevenue = $statsQuery->sum('total_amount');
+
+        // Kalkulasi HPP dari sale_details yang terkait
+        $totalCogs = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
+            if ($startDate && $endDate) {
+                $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+            }
+        })->sum(DB::raw('quantity * purchase_price'));
+        
+        $grossProfit = $totalRevenue - $totalCogs;
+
+        // Ambil data untuk tabel dengan paginasi (termasuk yang dibatalkan)
+        $tableQuery = Sale::withTrashed()->with('customer');
+        if ($startDate && $endDate) {
+            $tableQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+        }
+        $sales = $tableQuery->latest()->paginate(10)->appends($request->query());
+
         return view('reports.sales', [
             'sales' => $sales,
             'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
             'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
             'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
+            'totalTransactions' => $totalTransactions,
+            'totalRevenue' => $totalRevenue,
+            'totalCogs' => $totalCogs,
+            'grossProfit' => $grossProfit,
         ]);
     }
 
     public function purchasesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        $purchasesQuery = Purchase::withTrashed()->with('supplier');
+        
+        $purchasesQuery = Purchase::query(); // [MODIFIKASI V1.13.0] Hapus withTrashed untuk kalkulasi statistik
+
         if ($startDate && $endDate) {
             $purchasesQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
-        $purchases = $purchasesQuery->latest()->paginate(10)->appends($request->query());
+
+        // [BARU V1.13.0] Kalkulasi Statistik
+        $statsQuery = (clone $purchasesQuery);
+        $totalTransactions = $statsQuery->count();
+        $totalExpenditure = $statsQuery->sum('total_amount');
+        
+        // Ambil data untuk tabel dengan paginasi (termasuk yang dibatalkan)
+        $tableQuery = Purchase::withTrashed()->with('supplier');
+        if ($startDate && $endDate) {
+            $tableQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+        }
+        $purchases = $tableQuery->latest()->paginate(10)->appends($request->query());
+
         return view('reports.purchases', [
             'purchases' => $purchases,
             'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
             'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
             'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
+            'totalTransactions' => $totalTransactions,
+            'totalExpenditure' => $totalExpenditure,
         ]);
     }
 
@@ -82,12 +125,10 @@ class ReportController extends Controller
         return view('reports.stock', ['products' => $products]);
     }
 
-    // [MODIFIKASI V1.12.0] Rombak total logika perhitungan laba rugi
     public function profitAndLossReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        // Query builder dasar untuk penjualan yang sudah lunas dan memiliki detail
         $salesDetailsQuery = SaleDetail::query()
             ->whereHas('sale', function ($query) {
                 $query->where('payment_status', 'Lunas');
@@ -99,7 +140,6 @@ class ReportController extends Controller
             $startOfDay = $startDate->copy()->startOfDay();
             $endOfDay = $endDate->copy()->endOfDay();
             
-            // Filter sale_details berdasarkan tanggal di relasi sale
             $salesDetailsQuery->whereHas('sale', function ($query) use ($startOfDay, $endOfDay) {
                 $query->whereBetween('sale_date', [$startOfDay, $endOfDay]);
             });
@@ -107,11 +147,10 @@ class ReportController extends Controller
             $expensesQuery->whereBetween('expense_date', [$startOfDay, $endOfDay]);
         }
 
-        // [LOGIKA BARU] Hitung HPP dan Pendapatan dengan satu query efisien
         $reportData = $salesDetailsQuery
             ->select(
                 DB::raw('SUM(quantity * sale_price) as total_revenue'),
-                DB::raw('SUM(quantity * purchase_price) as total_cogs') // HPP Akurat!
+                DB::raw('SUM(quantity * purchase_price) as total_cogs')
             )
             ->first();
 
@@ -120,7 +159,7 @@ class ReportController extends Controller
 
         $totalExpenses = $expensesQuery->sum('amount');
         
-        $expensesByCategory = (clone $expensesQuery)->with('category') // Clone untuk query terpisah
+        $expensesByCategory = (clone $expensesQuery)->with('category')
             ->select('expense_category_id', DB::raw('SUM(amount) as total_amount'))
             ->groupBy('expense_category_id')
             ->get();
@@ -141,7 +180,6 @@ class ReportController extends Controller
         ]);
     }
 
-    // ... method export tetap sama ...
     public function exportSales(Request $request)
     {
         $startDate = $request->input('start_date');
