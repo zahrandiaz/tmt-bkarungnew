@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
+// [BARU V1.12.0] Import model PurchaseDetail
+use App\Models\PurchaseDetail;
 use App\Http\Requests\StoreSaleRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf; // <-- [BARU] Tambahkan ini
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SaleController extends Controller
 {
-    // ... (method index, create, store tetap sama) ...
     public function index(Request $request)
     {
         $status = $request->query('status');
@@ -32,32 +33,27 @@ class SaleController extends Controller
         return view('sales.create', compact('customers'));
     }
 
+    // [MODIFIKASI V1.12.0] Rombak total logika penyimpanan detail penjualan
     public function store(StoreSaleRequest $request)
     {
         $validatedData = $request->validated();
 
         try {
             DB::transaction(function () use ($validatedData, $request) {
-                // [PERBAIKAN V1.9.0] Standarisasi nilai payment_status
+                // Bagian header penjualan (tetap sama)
                 $totalAmount = $validatedData['total_amount'];
                 $paymentStatusRaw = $validatedData['payment_status'];
-                // Mengubah 'lunas' -> 'Lunas' atau 'belum lunas' -> 'Belum Lunas'
-                $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw)); 
-
+                $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw));
                 $totalPaid = 0;
-
-                // Gunakan nilai yang sudah distandarisasi untuk logika dan penyimpanan
                 if ($paymentStatus === 'Lunas') {
                     $totalPaid = $totalAmount;
                 } elseif ($paymentStatus === 'Belum Lunas') {
                     $totalPaid = $validatedData['down_payment'] ?? 0;
                 }
 
-                // Generate Invoice Number
                 $latestSaleId = Sale::withTrashed()->latest('id')->first()?->id ?? 0;
                 $invoiceNumber = 'INV/' . now()->format('Ym') . '/' . str_pad($latestSaleId + 1, 5, '0', STR_PAD_LEFT);
 
-                // Buat entri penjualan dengan data yang sudah standar
                 $sale = Sale::create([
                     'invoice_number' => $invoiceNumber,
                     'customer_id' => $validatedData['customer_id'],
@@ -66,24 +62,39 @@ class SaleController extends Controller
                     'notes' => $validatedData['notes'] ?? null,
                     'user_id' => $request->user()->id,
                     'payment_method' => $validatedData['payment_method'],
-                    'payment_status' => $paymentStatus, // Menyimpan nilai standar ('Lunas' / 'Belum Lunas')
+                    'payment_status' => $paymentStatus,
                     'down_payment' => $validatedData['down_payment'] ?? null,
                     'total_paid' => $totalPaid,
                 ]);
 
-                // Simpan detail item penjualan
+                // [LOGIKA BARU] Simpan detail item penjualan dengan HPP riil
                 foreach ($validatedData['items'] as $item) {
+                    $product = Product::find($item['product_id']);
+                    if (!$product) continue; // Lewati jika produk tidak ditemukan
+
+                    // Cari harga beli terakhir sebelum tanggal penjualan
+                    $lastPurchaseDetail = PurchaseDetail::where('product_id', $product->id)
+                        ->whereHas('purchase', function ($query) use ($sale) {
+                            $query->where('purchase_date', '<=', $sale->sale_date);
+                        })
+                        ->latest('created_at') // Urutkan berdasarkan kapan record dibuat
+                        ->first();
+
+                    // Tentukan HPP yang akan dicatat
+                    // Jika ada riwayat pembelian, gunakan harganya.
+                    // Jika tidak ada (misal, stok awal), gunakan harga beli dari master produk sebagai fallback.
+                    $hppToRecord = $lastPurchaseDetail ? $lastPurchaseDetail->purchase_price : $product->purchase_price;
+
+                    // Simpan detail penjualan dengan HPP yang sudah ditemukan
                     $sale->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'sale_price' => $item['sale_price'],
+                        'purchase_price' => $hppToRecord, // <-- Kolom baru diisi di sini
                     ]);
 
                     // Kurangi stok produk
-                    $product = Product::find($item['product_id']);
-                    if ($product) {
-                        $product->decrement('stock', $item['quantity']);
-                    }
+                    $product->decrement('stock', $item['quantity']);
                 }
             });
 
@@ -94,17 +105,12 @@ class SaleController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
-        // [MODIFIKASI] Gunakan withTrashed() dan muat relasi user
         $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product'])->findOrFail($id);
         return view('sales.show', compact('sale'));
     }
     
-    // ... (method cancel, restore, destroy tetap sama) ...
     public function cancel(Sale $sale)
     {
         $sale->delete(); 
@@ -125,24 +131,17 @@ class SaleController extends Controller
         return redirect()->route('sales.index')->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dihapus permanen.");
     }
 
-    /**
-     * [BARU] Menampilkan view untuk cetak struk thermal.
-     */
     public function printThermal($id)
     {
         $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product'])->findOrFail($id);
         return view('sales.print-thermal', compact('sale'));
     }
 
-    /**
-     * [BARU] Mengunduh transaksi dalam format PDF.
-     */
     public function downloadPDF($id)
     {
         $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product'])->findOrFail($id);
         $pdf = Pdf::loadView('sales.print-pdf', compact('sale'));
         
-        // Nama file: INV-202508-00001.pdf
         $fileName = str_replace('/', '-', $sale->invoice_number) . '.pdf';
 
         return $pdf->download($fileName);
