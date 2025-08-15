@@ -8,6 +8,8 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             
+            {{-- [MODIFIKASI V2.0.0] Bungkus form dengan @can --}}
+            @can('adjustment-stock')
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="stockAdjustmentForm()">
                 <div class="max-w-xl">
                     <h3 class="text-lg font-medium text-gray-900">Buat Penyesuaian Baru</h3>
@@ -27,11 +29,11 @@
                          </div>
                     @endif
                      @if ($errors->any())
-                        <div class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+                         <div class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
                             <strong class="font-bold">Terjadi Kesalahan Validasi!</strong>
                             <ul>@foreach ($errors->all() as $error) <li>{{ $error }}</li> @endforeach</ul>
-                        </div>
-                    @endif
+                         </div>
+                     @endif
 
                     <form method="post" action="{{ route('stock-adjustments.store') }}" class="mt-6 space-y-6">
                         @csrf
@@ -70,6 +72,7 @@
                     </form>
                 </div>
             </div>
+            @endcan
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">

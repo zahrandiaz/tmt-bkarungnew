@@ -17,23 +17,24 @@
                         
                         <div class="flex items-center space-x-2">
                             @if (!$purchase->trashed())
+                                @can('transaction-cancel')
                                 <form method="POST" action="{{ route('purchases.cancel', $purchase->id) }}" onsubmit="return confirm('Yakin ingin membatalkan transaksi ini?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-500">Batalkan</button>
                                 </form>
+                                @endcan
                             @endif
-                            @role('Admin')
+                            @can('transaction-delete-permanent')
                                 <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" onsubmit="return confirm('PERINGATAN: Aksi ini akan menghapus data permanen. Yakin?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">Hapus Permanen</button>
                                 </form>
-                            @endrole
+                            @endcan
                         </div>
                     </div>
 
-                    {{-- [MODIFIKASI V1.9.0] Informasi Detail Transaksi dengan Status Bayar --}}
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Kode Pembelian</h3>

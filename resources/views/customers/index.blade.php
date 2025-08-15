@@ -23,12 +23,12 @@
                     @endif
 
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        @hasanyrole('Admin|Manager')
+                        {{-- [MODIFIKASI V2.0.0] Ganti @hasanyrole menjadi @can --}}
+                        @can('product-create')
                             <a href="{{ route('customers.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 w-full sm:w-auto">
                                 Tambah Pelanggan
                             </a>
-                        @endhasanyrole
-                        <!-- [BARU V1.14.0] Form Pencarian -->
+                        @endcan
                         <form action="{{ route('customers.index') }}" method="GET" class="w-full sm:w-auto sm:max-w-xs ml-auto">
                             <div class="flex items-center">
                                 <input type="text" name="search" placeholder="Cari nama/telepon..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value="{{ $search ?? '' }}">
@@ -46,9 +46,10 @@
                                     <th scope="col" class="px-6 py-3">Nama</th>
                                     <th scope="col" class="px-6 py-3">Telepon</th>
                                     <th scope="col" class="px-6 py-3">Alamat</th>
-                                    @hasanyrole('Admin|Manager')
+                                    {{-- [MODIFIKASI V2.0.0] Cek setidaknya salah satu permission edit/delete --}}
+                                    @if(auth()->user()->can('product-edit') || auth()->user()->can('product-delete'))
                                     <th scope="col" class="px-6 py-3">Aksi</th>
-                                    @endhasanyrole
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -63,24 +64,29 @@
                                     <td class="px-6 py-4">
                                         {{ $customer->address }}
                                     </td>
-                                    @hasanyrole('Admin|Manager')
+                                    {{-- [MODIFIKASI V2.0.0] Ganti @hasanyrole menjadi @can per tombol --}}
+                                    @if(auth()->user()->can('product-edit') || auth()->user()->can('product-delete'))
                                     <td class="px-6 py-4">
                                         <div class="flex space-x-2">
+                                            @can('product-edit')
                                             <a href="{{ route('customers.edit', $customer->id) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
-                                            
+                                            @endcan
+                                            @can('product-delete')
                                             <form method="POST" action="{{ route('customers.destroy', $customer->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pelanggan ini?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Hapus</button>
                                             </form>
+                                            @endcan
                                         </div>
                                     </td>
-                                    @endhasanyrole
+                                    @endif
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
-                                    <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '4' : '3' }}" class="px-6 py-4 text-center">
-                                        @if ($search)
+                                    {{-- [MODIFIKASI V2.0.0] Sesuaikan colspan --}}
+                                    <td colspan="{{ auth()->user()->canany(['product-edit', 'product-delete']) ? '4' : '3' }}" class="px-6 py-4 text-center">
+                                        @if ($search ?? false)
                                             Pelanggan dengan kata kunci "{{ $search }}" tidak ditemukan.
                                         @else
                                             Tidak ada data.

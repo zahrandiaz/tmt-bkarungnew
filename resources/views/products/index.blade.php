@@ -23,12 +23,12 @@
 
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-semibold text-lg">Daftar Produk</h3>
-                        @hasanyrole('Admin|Manager')
+                        {{-- [MODIFIKASI V2.0.0] Ganti @hasanyrole menjadi @can --}}
+                        @can('product-create')
                         <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Tambah Produk</a>
-                        @endhasanyrole
+                        @endcan
                     </div>
 
-                    <!-- [BARU V1.14.0] Form Pencarian -->
                     <div class="mb-4">
                         <form action="{{ route('products.index') }}" method="GET">
                             <div class="flex items-center">
@@ -49,9 +49,10 @@
                                     <th class="p-2">Jenis</th>
                                     <th class="p-2">Harga Jual</th>
                                     <th class="p-2">Stok</th>
-                                    @hasanyrole('Admin|Manager')
+                                    {{-- [MODIFIKASI V2.0.0] Cek setidaknya salah satu permission edit/delete --}}
+                                    @if(auth()->user()->can('product-edit') || auth()->user()->can('product-delete'))
                                     <th class="p-2">Aksi</th>
-                                    @endhasanyrole
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -64,21 +65,27 @@
                                         <td class="p-2">{{ $product->type->name }}</td>
                                         <td class="p-2">Rp {{ number_format($product->selling_price, 0, ',', '.') }}</td>
                                         <td class="p-2">{{ $product->stock }}</td>
-                                        @hasanyrole('Admin|Manager')
+                                        {{-- [MODIFIKASI V2.0.0] Ganti @hasanyrole menjadi @can per tombol --}}
+                                        @if(auth()->user()->can('product-edit') || auth()->user()->can('product-delete'))
                                         <td class="p-2 flex space-x-2">
+                                            @can('product-edit')
                                             <a href="{{ route('products.edit', $product) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">Edit</a>
+                                            @endcan
+                                            @can('product-delete')
                                             <form action="{{ route('products.destroy', $product) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus produk ini?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Hapus</button>
                                             </form>
+                                            @endcan
                                         </td>
-                                        @endhasanyrole
+                                        @endif
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ auth()->user()->hasAnyRole(['Admin', 'Manager']) ? '8' : '7' }}" class="p-4 text-center">
-                                            @if ($search)
+                                        {{-- [MODIFIKASI V2.0.0] Sesuaikan colspan --}}
+                                        <td colspan="{{ auth()->user()->canany(['product-edit', 'product-delete']) ? '8' : '7' }}" class="p-4 text-center">
+                                            @if ($search ?? false)
                                                 Produk dengan kata kunci "{{ $search }}" tidak ditemukan.
                                             @else
                                                 Tidak ada produk.
@@ -91,7 +98,6 @@
                     </div>
 
                     <div class="mt-4">
-                        {{-- [MODIFIKASI V1.14.0] Pastikan paginasi mempertahankan query pencarian --}}
                         {{ $products->links() }}
                     </div>
                 </div>
