@@ -13,7 +13,7 @@ class ProductTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        ProductType::create(['name' => 'Karung']);
-        ProductType::create(['name' => 'Non Karung']);
+        ProductType::firstOrCreate(['name' => 'Karung']);
+        ProductType::firstOrCreate(['name' => 'Non Karung']);
     }
 }

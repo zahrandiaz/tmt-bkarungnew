@@ -20,9 +20,12 @@
                                     </button>
                                 </div>
                             </form>
+                             {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                             @can('finance-crud-expense')
                              <a href="{{ route('expenses.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 w-full sm:w-auto justify-center">
                                 Tambah Biaya
                             </a>
+                            @endcan
                         </div>
                     </div>
 
@@ -41,9 +44,12 @@
                                     <th scope="col" class="px-6 py-3">Nama Biaya</th>
                                     <th scope="col" class="px-6 py-3">Kategori</th>
                                     <th scope="col" class="px-6 py-3 text-right">Jumlah</th>
+                                    {{-- [MODIFIKASI V2.0.0] Cek permission --}}
+                                    @can('finance-crud-expense')
                                     <th scope="col" class="px-6 py-3">
                                         <span class="sr-only">Aksi</span>
                                     </th>
+                                    @endcan
                                 </tr>
                             </thead>
                             <tbody>
@@ -56,6 +62,8 @@
                                         </td>
                                         <td class="px-6 py-4">{{ $expense->category->name }}</td>
                                         <td class="px-6 py-4 text-right">Rp {{ number_format($expense->amount, 0, ',', '.') }}</td>
+                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                                        @can('finance-crud-expense')
                                         <td class="px-6 py-4 text-right">
                                             <a href="{{ route('expenses.edit', $expense) }}" class="font-medium text-blue-600 hover:underline mr-3">Edit</a>
                                             <form action="{{ route('expenses.destroy', $expense) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus biaya ini?');" class="inline">
@@ -64,11 +72,13 @@
                                                 <button type="submit" class="font-medium text-red-600 hover:underline">Hapus</button>
                                             </form>
                                         </td>
+                                        @endcan
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
-                                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                             @if ($search)
+                                        {{-- [MODIFIKASI V2.0.0] Sesuaikan colspan --}}
+                                        <td colspan="{{ auth()->user()->can('finance-crud-expense') ? '6' : '5' }}" class="px-6 py-4 text-center text-gray-500">
+                                            @if ($search ?? false)
                                                 Biaya dengan kata kunci "{{ $search }}" tidak ditemukan.
                                             @else
                                                 Tidak ada data biaya operasional.

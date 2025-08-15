@@ -11,8 +11,8 @@
                 <div class="p-6 text-gray-900">
                     
                     <div class="mb-4 border-b border-gray-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-center pb-4 gap-4">
-                             <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+                         <div class="flex flex-col sm:flex-row justify-between items-center pb-4 gap-4">
+                            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
                                 <li class="me-2">
                                     <a href="{{ route('receivables.index', ['status' => 'belum lunas']) }}" 
                                        class="inline-block p-4 border-b-2 rounded-t-lg {{ request('status', 'belum lunas') == 'belum lunas' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
@@ -57,9 +57,12 @@
                                     @if(request('status', 'belum lunas') == 'belum lunas')
                                     <th scope="col" class="px-6 py-3 text-right">Sisa Tagihan</th>
                                     @endif
+                                    {{-- [MODIFIKASI V2.0.0] Cek permission --}}
+                                    @can('finance-manage-payment')
                                     <th scope="col" class="px-6 py-3">
                                         <span class="sr-only">Aksi</span>
                                     </th>
+                                    @endcan
                                 </tr>
                             </thead>
                             <tbody>
@@ -78,14 +81,17 @@
                                             Rp {{ number_format($sale->total_amount - $sale->total_paid, 0, ',', '.') }}
                                         </td>
                                         @endif
+                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                                        @can('finance-manage-payment')
                                         <td class="px-6 py-4 text-right">
                                             <a href="{{ route('receivables.manage', $sale->id) }}" class="font-medium text-blue-600 hover:underline">Kelola</a>
                                         </td>
+                                        @endcan
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
                                         <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                            @if ($search)
+                                            @if ($search ?? false)
                                                 Piutang dengan kata kunci "{{ $search }}" tidak ditemukan.
                                             @else
                                                 Tidak ada data piutang untuk status ini.

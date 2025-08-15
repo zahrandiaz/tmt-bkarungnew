@@ -22,10 +22,12 @@
                     @endif
 
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        @can('transaction-create')
                         <a href="{{ route('sales.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 w-full sm:w-auto">
                             Tambah Penjualan
                         </a>
-                        <form action="{{ route('sales.index') }}" method="GET" class="w-full sm:w-auto sm:max-w-xs">
+                        @endcan
+                        <form action="{{ route('sales.index') }}" method="GET" class="w-full sm:w-auto sm:max-w-xs ml-auto">
                             <input type="hidden" name="status" value="{{ request('status', 'selesai') }}">
                             <div class="flex items-center">
                                 <input type="text" name="search" placeholder="Cari invoice/pelanggan..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value="{{ $search ?? '' }}">
@@ -88,26 +90,26 @@
                                     </td>
                                     <td class="px-6 py-4 text-left flex items-center space-x-2">
                                         @if ($sale->trashed())
-                                            @role('Admin')
+                                            @can('transaction-restore')
                                                 <form action="{{ route('sales.restore', $sale->id) }}" method="POST" onsubmit="return confirm('Anda yakin ingin memulihkan transaksi ini?')">
                                                     @csrf
                                                     <button type="submit" class="font-medium text-green-600 hover:underline">Pulihkan</button>
                                                 </form>
-                                            @endrole
+                                            @endcan
                                         @else
                                             <a href="{{ route('sales.show', $sale->id) }}" class="font-medium text-blue-600 hover:underline">Detail</a>
-                                            @if ($sale->payment_status == 'Belum Lunas')
-                                                @role('Admin|Manager')
+                                            @can('finance-manage-payment')
+                                                @if ($sale->payment_status == 'Belum Lunas')
                                                     <a href="{{ route('receivables.manage', $sale->id) }}" class="font-medium text-yellow-600 hover:underline">Kelola Bayar</a>
-                                                @endrole
-                                            @endif
+                                                @endif
+                                            @endcan
                                         @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr class="bg-white border-b">
                                     <td colspan="8" class="px-6 py-4 text-center">
-                                        @if ($search)
+                                        @if ($search ?? false)
                                             Transaksi dengan kata kunci "{{ $search }}" tidak ditemukan.
                                         @else
                                             Belum ada data transaksi penjualan pada tab ini.

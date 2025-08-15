@@ -94,13 +94,16 @@
                             {{ $products->links() }}
                         </div>
 
-                        @if($products->isNotEmpty())
-                        <div class="flex items-center justify-end mt-6">
-                            <x-primary-button>
-                                {{ __('Simpan Perubahan') }}
-                            </x-primary-button>
-                        </div>
-                        @endif
+                        {{-- [MODIFIKASI V2.0.0] Ganti @if menjadi @can --}}
+                        @can('adjustment-price')
+                            @if($products->isNotEmpty())
+                            <div class="flex items-center justify-end mt-6">
+                                <x-primary-button>
+                                    {{ __('Simpan Perubahan') }}
+                                </x-primary-button>
+                            </div>
+                            @endif
+                        @endcan
                     </form>
                 </div>
             </div>

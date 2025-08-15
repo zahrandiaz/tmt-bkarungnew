@@ -16,7 +16,7 @@
                         </div>
                     @endif
 
-                    {{-- [BARU] Notifikasi Eror --}}
+                    {{-- Notifikasi Eror --}}
                     @if (session('error'))
                         <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
                             {{ session('error') }}
@@ -32,7 +32,10 @@
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Nama</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Email</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Peran</th>
+                                    {{-- [MODIFIKASI V2.0.0] Cek permission user-edit --}}
+                                    @can('user-edit')
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Aksi</th>
+                                    @endcan
                                 </tr>
                             </thead>
 
@@ -46,11 +49,14 @@
                                                 {{ $user->getRoleNames()->first() ?? 'Belum ada peran' }}
                                             </span>
                                         </td>
+                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                                        @can('user-edit')
                                         <td class="whitespace-nowrap px-4 py-2">
                                             <a href="{{ route('users.edit', $user) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">
                                                 Edit
                                             </a>
                                         </td>
+                                        @endcan
                                     </tr>
                                 @empty
                                     <tr>
@@ -63,7 +69,6 @@
                         </table>
                     </div>
 
-                    {{-- [BARU] Tambahkan blok ini untuk link paginasi --}}
                     <div class="mt-4">
                         {{ $users->links() }}
                     </div>

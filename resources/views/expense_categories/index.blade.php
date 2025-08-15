@@ -11,9 +11,12 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Daftar Kategori Biaya</h3>
+                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                        @can('finance-crud-expense')
                         <a href="{{ route('expense-categories.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 focus:outline-none focus:border-blue-700 focus:ring focus:ring-blue-200 active:bg-blue-600 disabled:opacity-25 transition">
                             Tambah Kategori
                         </a>
+                        @endcan
                     </div>
 
                     @if (session('success'))
@@ -29,9 +32,12 @@
                                     <th scope="col" class="px-6 py-3">No. Urut</th>
                                     <th scope="col" class="px-6 py-3">Nama Kategori</th>
                                     <th scope="col" class="px-6 py-3">Deskripsi</th>
+                                    {{-- [MODIFIKASI V2.0.0] Cek permission --}}
+                                    @can('finance-crud-expense')
                                     <th scope="col" class="px-6 py-3">
                                         <span class="sr-only">Aksi</span>
                                     </th>
+                                    @endcan
                                 </tr>
                             </thead>
                             <tbody>
@@ -42,6 +48,8 @@
                                             {{ $category->name }}
                                         </td>
                                         <td class="px-6 py-4">{{ $category->description ?? '-' }}</td>
+                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                                        @can('finance-crud-expense')
                                         <td class="px-6 py-4 text-right">
                                             <a href="{{ route('expense-categories.edit', $category) }}" class="font-medium text-blue-600 hover:underline mr-3">Edit</a>
                                             <form action="{{ route('expense-categories.destroy', $category) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori ini?');" class="inline">
@@ -50,10 +58,12 @@
                                                 <button type="submit" class="font-medium text-red-600 hover:underline">Hapus</button>
                                             </form>
                                         </td>
+                                        @endcan
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
-                                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                        {{-- [MODIFIKASI V2.0.0] Sesuaikan colspan --}}
+                                        <td colspan="{{ auth()->user()->can('finance-crud-expense') ? '4' : '3' }}" class="px-6 py-4 text-center text-gray-500">
                                             Tidak ada data kategori biaya.
                                         </td>
                                     </tr>

@@ -13,7 +13,7 @@ class ProductCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        ProductCategory::create(['name' => 'Baru']);
-        ProductCategory::create(['name' => 'Bekas']);
+        ProductCategory::firstOrCreate(['name' => 'Baru']);
+        ProductCategory::firstOrCreate(['name' => 'Bekas']);
     }
 }

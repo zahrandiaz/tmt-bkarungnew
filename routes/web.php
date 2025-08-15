@@ -18,6 +18,7 @@ use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PriceAdjustmentController;
 use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\PermissionController; // [BARU] Import PermissionController
 
 use Illuminate\Support\Facades\Route;
 
@@ -30,95 +31,78 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 });
 
-// Rute HANYA untuk ADMIN
-Route::middleware(['auth', 'role:Admin'])->group(function () {
-    // Manajemen Peran & Pengguna
-    Route::resource('roles', RoleController::class);
-    Route::resource('users', UserController::class);
+// [MODIFIKASI V2.0.0] Ganti semua middleware 'role' menjadi 'can'
+Route::middleware(['auth'])->group(function () {
+    // Manajemen Pengguna & Peran (Hanya Admin)
+    Route::resource('roles', RoleController::class)->middleware('can:role-view');
+    Route::resource('users', UserController::class)->middleware('can:user-view');
+    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index')->middleware('can:role-edit');
+    Route::post('permissions', [PermissionController::class, 'update'])->name('permissions.update')->middleware('can:role-edit');
 
-    // Hapus Permanen Transaksi (Hard Delete)
-    Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
-    Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('sales.destroy');
+    // Hapus & Pulihkan Transaksi
+    Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy')->middleware('can:transaction-delete-permanent');
+    Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('sales.destroy')->middleware('can:transaction-delete-permanent');
+    Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore')->middleware('can:transaction-restore');
+    Route::post('sales/{id}/restore', [SaleController::class, 'restore'])->name('sales.restore')->middleware('can:transaction-restore');
 
-    // Pulihkan Transaksi (Restore)
-    Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
-    Route::post('sales/{id}/restore', [SaleController::class, 'restore'])->name('sales.restore');
-});
+    // Master Data & Produk
+    Route::resource('product-categories', ProductCategoryController::class)->middleware('can:product-view');
+    Route::resource('product-types', ProductTypeController::class)->middleware('can:product-view');
+    Route::resource('products', ProductController::class)->middleware('can:product-view');
+    Route::resource('suppliers', SupplierController::class)->middleware('can:product-view');
+    Route::resource('customers', CustomerController::class)->middleware('can:product-view');
+    Route::resource('expense-categories', ExpenseCategoryController::class)->middleware('can:finance-crud-expense');
 
-// Rute untuk ADMIN dan MANAGER
-Route::middleware(['auth', 'role:Admin|Manager'])->group(function () {
-    // Master Data
-    Route::resource('product-categories', ProductCategoryController::class);
-    Route::resource('product-types', ProductTypeController::class);
-    Route::resource('products', ProductController::class);
-    Route::resource('suppliers', SupplierController::class);
-    Route::resource('customers', CustomerController::class);
-    Route::resource('expense-categories', ExpenseCategoryController::class);
-    
     // Laporan
-    Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
-    Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases');
-    Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
-    Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss');
-
-    // API untuk detail laporan interaktif
-    Route::get('/api/reports/sale-details/{id}', [ReportController::class, 'getSaleDetails'])->name('api.reports.sale-details');
-    Route::get('/api/reports/purchase-details/{id}', [ReportController::class, 'getPurchaseDetails'])->name('api.reports.purchase-details');
+    Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales')->middleware('can:report-view-all');
+    Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases')->middleware('can:report-view-all');
+    Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware('can:report-view-all');
+    Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss')->middleware('can:report-view-all');
 
     // Ekspor
-    Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export');
-    Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export');
-    Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export');
+    Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export')->middleware('can:report-view-all');
+    Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export')->middleware('can:report-view-all');
+    Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export')->middleware('can:report-view-all');
     
     // Manajemen Keuangan
-    Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index');
-    Route::get('receivables/{sale}/manage', [ReceivableController::class, 'manage'])->name('receivables.manage');
-    Route::post('receivables/{sale}/payments', [ReceivableController::class, 'storePayment'])->name('receivables.payments.store');
+    Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index')->middleware('can:finance-view');
+    Route::get('receivables/{sale}/manage', [ReceivableController::class, 'manage'])->name('receivables.manage')->middleware('can:finance-manage-payment');
+    Route::post('receivables/{sale}/payments', [ReceivableController::class, 'storePayment'])->name('receivables.payments.store')->middleware('can:finance-manage-payment');
 
-    Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
-    Route::get('debts/{purchase}/manage', [DebtController::class, 'manage'])->name('debts.manage');
-    Route::post('debts/{purchase}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store');
+    Route::get('debts', [DebtController::class, 'index'])->name('debts.index')->middleware('can:finance-view');
+    Route::get('debts/{purchase}/manage', [DebtController::class, 'manage'])->name('debts.manage')->middleware('can:finance-manage-payment');
+    Route::post('debts/{purchase}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store')->middleware('can:finance-manage-payment');
 
-    // Manajemen Biaya
-    Route::resource('expenses', ExpenseController::class);
+    Route::resource('expenses', ExpenseController::class)->middleware('can:finance-crud-expense');
 
-    // Penyesuaian Harga Jual
-    Route::get('price-adjustments', [PriceAdjustmentController::class, 'index'])->name('price-adjustments.index');
-    Route::post('price-adjustments', [PriceAdjustmentController::class, 'store'])->name('price-adjustments.store');
+    // Penyesuaian
+    Route::get('price-adjustments', [PriceAdjustmentController::class, 'index'])->name('price-adjustments.index')->middleware('can:adjustment-price');
+    Route::post('price-adjustments', [PriceAdjustmentController::class, 'store'])->name('price-adjustments.store')->middleware('can:adjustment-price');
+    Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index')->middleware('can:adjustment-stock');
+    Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store')->middleware('can:adjustment-stock');
 
-    // Penyesuaian Stok
-    Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index');
-    Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store');
-});
+    // Transaksi
+    Route::delete('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel')->middleware('can:transaction-cancel');
+    Route::resource('purchases', PurchaseController::class)->except(['destroy'])->middleware('can:transaction-view');
+    Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel')->middleware('can:transaction-cancel');
+    Route::resource('sales', SaleController::class)->except(['destroy'])->middleware('can:transaction-view');
 
-// Rute untuk ADMIN, MANAGER, dan STAF
-Route::middleware(['auth', 'role:Admin|Manager|Staf'])->group(function () {
-    // Transaksi Pembelian (tanpa hard delete)
-    Route::delete('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
-    Route::resource('purchases', PurchaseController::class)->except(['destroy']);
-
-    // Transaksi Penjualan (tanpa hard delete)
-    Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel');
-    Route::resource('sales', SaleController::class)->except(['destroy']);
-
-    // API untuk pencarian produk
-    Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search');
+    // API
+    Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search')->middleware('can:transaction-create');
+    Route::get('/api/products/gallery', [ProductController::class, 'gallery'])->name('api.products.gallery')->middleware('can:transaction-create');
+    Route::get('/api/reports/sale-details/{id}', [ReportController::class, 'getSaleDetails'])->name('api.reports.sale-details')->middleware('can:report-view-all');
+    Route::get('/api/reports/purchase-details/{id}', [ReportController::class, 'getPurchaseDetails'])->name('api.reports.purchase-details')->middleware('can:report-view-all');
     
-    // API untuk galeri produk
-    Route::get('/api/products/gallery', [ProductController::class, 'gallery'])->name('api.products.gallery');
-
-    // Rute untuk cetak dan unduh
-    Route::get('sales/{id}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
-    Route::get('sales/{id}/download-pdf', [SaleController::class, 'downloadPDF'])->name('sales.downloadPDF');
+    // Rute Cetak
+    Route::get('sales/{id}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal')->middleware('can:transaction-view');
+    Route::get('sales/{id}/download-pdf', [SaleController::class, 'downloadPDF'])->name('sales.downloadPDF')->middleware('can:transaction-view');
 });
 
-
-// Rute Profil Pengguna (bisa diakses semua setelah login)
+// Rute Profil Pengguna
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
 
 require __DIR__.'/auth.php';

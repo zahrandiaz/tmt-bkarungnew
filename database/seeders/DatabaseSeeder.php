@@ -16,9 +16,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // Seeder Inti
             RoleSeeder::class,
+            PermissionSeeder::class, // [BARU V2.0.0] Daftarkan permission seeder
             UserSeeder::class, 
             
-            // [BARU] Seeder Data Master
+            // Seeder Data Master
             ProductCategorySeeder::class,
             ProductTypeSeeder::class,
             SupplierSeeder::class,

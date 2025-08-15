@@ -20,12 +20,13 @@
             @endif
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {{-- [MODIFIKASI V2.0.0] Bungkus form dengan @can --}}
+                @can('finance-manage-payment')
                 {{-- Kolom Kiri: Form Pembayaran --}}
                 <div class="md:col-span-1">
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="p-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Catat Pembayaran Baru</h3>
-                            {{-- [UBAH] Tambahkan enctype untuk upload file --}}
                             <form method="POST" action="{{ route('debts.payments.store', $purchase) }}" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mt-4">
@@ -69,9 +70,11 @@
                         </div>
                     </div>
                 </div>
+                @endcan
 
                 {{-- Kolom Kanan: Detail & Riwayat --}}
-                <div class="md:col-span-2">
+                {{-- [MODIFIKASI V2.0.0] Sesuaikan lebar kolom jika form disembunyikan --}}
+                <div class="@can('finance-manage-payment') md:col-span-2 @else md:col-span-3 @endcan">
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                         <div class="p-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Ringkasan Utang</h3>
@@ -98,7 +101,7 @@
                                             <th class="px-4 py-3 text-right">Jumlah</th>
                                             <th class="px-4 py-3">Metode</th>
                                             <th class="px-4 py-3">Dicatat Oleh</th>
-                                            <th class="px-4 py-3">Bukti</th> {{-- [BARU] --}}
+                                            <th class="px-4 py-3">Bukti</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -108,7 +111,6 @@
                                                 <td class="px-4 py-3 text-right font-medium">Rp {{ number_format($payment->amount, 0, ',', '.') }}</td>
                                                 <td class="px-4 py-3">{{ Str::title($payment->payment_method) }}</td>
                                                 <td class="px-4 py-3">{{ $payment->user->name ?? 'N/A' }}</td>
-                                                {{-- [BARU] Kolom untuk link bukti bayar --}}
                                                 <td class="px-4 py-3">
                                                     @if($payment->attachment_path)
                                                         <a href="{{ asset('storage/' . $payment->attachment_path) }}" target="_blank" class="text-blue-600 hover:underline">Lihat</a>

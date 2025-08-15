@@ -57,9 +57,12 @@
                                     @if(request('status', 'belum lunas') == 'belum lunas')
                                     <th scope="col" class="px-6 py-3 text-right">Sisa Tagihan</th>
                                     @endif
+                                    {{-- [MODIFIKASI V2.0.0] Cek permission --}}
+                                    @can('finance-manage-payment')
                                     <th scope="col" class="px-6 py-3">
                                         <span class="sr-only">Aksi</span>
                                     </th>
+                                    @endcan
                                 </tr>
                             </thead>
                             <tbody>
@@ -78,14 +81,17 @@
                                             Rp {{ number_format($purchase->total_amount - $purchase->total_paid, 0, ',', '.') }}
                                         </td>
                                         @endif
+                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
+                                        @can('finance-manage-payment')
                                         <td class="px-6 py-4 text-right">
                                             <a href="{{ route('debts.manage', $purchase->id) }}" class="font-medium text-blue-600 hover:underline">Kelola</a>
                                         </td>
+                                        @endcan
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
                                         <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                            @if ($search)
+                                            @if ($search ?? false)
                                                 Utang dengan kata kunci "{{ $search }}" tidak ditemukan.
                                             @else
                                                 Tidak ada data utang untuk status ini.
