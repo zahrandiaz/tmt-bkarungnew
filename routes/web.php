@@ -58,11 +58,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/purchases', [ReportController::class, 'purchasesReport'])->name('reports.purchases')->middleware('can:report-view-all');
     Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware('can:report-view-all');
     Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss')->middleware('can:report-view-all');
+    Route::get('reports/deposits', [ReportController::class, 'depositReport'])->name('reports.deposits')->middleware('can:report-view-all');
 
     // Ekspor
-    Route::get('reports/sales/export', [ReportController::class, 'exportSales'])->name('reports.sales.export')->middleware('can:report-view-all');
-    Route::get('reports/purchases/export', [ReportController::class, 'exportPurchases'])->name('reports.purchases.export')->middleware('can:report-view-all');
+    Route::get('reports/sales/export-csv', [ReportController::class, 'exportSalesCsv'])->name('reports.sales.export.csv')->middleware('can:report-view-all');
+    Route::get('reports/sales/export-pdf', [ReportController::class, 'exportSalesPdf'])->name('reports.sales.export.pdf')->middleware('can:report-view-all');
+    Route::get('reports/purchases/export-csv', [ReportController::class, 'exportPurchasesCsv'])->name('reports.purchases.export.csv')->middleware('can:report-view-all');
+    Route::get('reports/purchases/export-pdf', [ReportController::class, 'exportPurchasesPdf'])->name('reports.purchases.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export')->middleware('can:report-view-all');
+    Route::get('reports/deposits/export-csv', [ReportController::class, 'exportDepositsCsv'])->name('reports.deposits.export.csv')->middleware('can:report-view-all');
+    Route::get('reports/deposits/export-pdf', [ReportController::class, 'exportDepositsPdf'])->name('reports.deposits.export.pdf')->middleware('can:report-view-all');
+    Route::get('reports/profit-loss/export-csv', [ReportController::class, 'exportProfitAndLossCsv'])->name('reports.profit-loss.export.csv')->middleware('can:report-view-all');
+    Route::get('reports/profit-loss/export-pdf', [ReportController::class, 'exportProfitAndLossPdf'])->name('reports.profit-loss.export.pdf')->middleware('can:report-view-all');
     
     // Manajemen Keuangan
     Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index')->middleware('can:finance-view');

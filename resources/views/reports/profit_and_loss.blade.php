@@ -7,12 +7,10 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Form Filter -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900">
                     <h3 class="font-semibold mb-4">Filter Laporan</h3>
 
-                    <!-- Tombol Filter Cepat -->
                     <div class="flex items-center space-x-2 mb-4">
                         <a href="{{ route('reports.profit-loss', ['period' => 'today']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'today' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Hari Ini</a>
                         <a href="{{ route('reports.profit-loss', ['period' => 'this_week']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'this_week' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Minggu Ini</a>
@@ -20,7 +18,6 @@
                         <a href="{{ route('reports.profit-loss', ['period' => 'this_year']) }}" class="px-3 py-2 text-sm font-medium rounded-md {{ $period == 'this_year' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">Tahun Ini</a>
                     </div>
 
-                    <!-- Filter Manual -->
                     <form action="{{ route('reports.profit-loss') }}" method="GET">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
@@ -35,7 +32,12 @@
                                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
                                     Filter Manual
                                 </button>
-                                <a href="{{ route('reports.profit-loss') }}" class="ml-2 inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300">Reset</a>
+                                <a href="{{ route('reports.profit-loss.export.csv', request()->query()) }}" class="ml-2 inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500">
+                                    Ekspor CSV
+                                </a>
+                                <a href="{{ route('reports.profit-loss.export.pdf', request()->query()) }}" target="_blank" class="ml-2 inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">
+                                    Unduh PDF
+                                </a>
                             </div>
                         </div>
                     </form>
@@ -54,7 +56,7 @@
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold text-gray-700">Total HPP</h3>
                         <p class="mt-2 text-3xl font-bold text-orange-600">
-                           - Rp {{ number_format($totalCostOfGoods, 0, ',', '.') }}
+                            - Rp {{ number_format($totalCostOfGoods, 0, ',', '.') }}
                         </p>
                     </div>
                     <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-400">
@@ -70,7 +72,7 @@
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold text-gray-700">Total Biaya Operasional</h3>
                         <p class="mt-2 text-3xl font-bold text-red-600">
-                           - Rp {{ number_format($totalExpenses, 0, ',', '.') }}
+                            - Rp {{ number_format($totalExpenses, 0, ',', '.') }}
                         </p>
                         
                         {{-- Tabel Rincian Biaya --}}
@@ -99,9 +101,9 @@
             </div>
             
              <div class="mt-6 text-sm text-gray-600">
-                <p>* Laporan ini hanya menghitung penjualan dengan status <strong>Lunas</strong> pada rentang tanggal yang dipilih.</p>
-                <p>* HPP (Harga Pokok Penjualan) dihitung dari harga beli produk saat ini di master data.</p>
-            </div>
+                 <p>* Laporan ini hanya menghitung penjualan dengan status <strong>Lunas</strong> pada rentang tanggal yang dipilih.</p>
+                 <p>* HPP (Harga Pokok Penjualan) dihitung dari harga beli produk saat ini di master data.</p>
+             </div>
 
         </div>
     </div>

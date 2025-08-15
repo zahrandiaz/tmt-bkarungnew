@@ -48,7 +48,8 @@
                             </div>
                             <div class="self-end">
                                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Filter Manual</button>
-                                <a href="{{ route('reports.sales.export', request()->query()) }}" class="ml-2 inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500">Ekspor CSV</a>
+                                <a href="{{ route('reports.sales.export.csv', request()->query()) }}" class="ml-2 inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500">Ekspor CSV</a>
+                                <a href="{{ route('reports.sales.export.pdf', request()->query()) }}" target="_blank" class="ml-2 inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">Unduh PDF</a>
                             </div>
                         </div>
                     </form>
