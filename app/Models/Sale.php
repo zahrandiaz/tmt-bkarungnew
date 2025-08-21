@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany; // <-- TAMBAHKAN INI
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
@@ -51,10 +51,18 @@ class Sale extends Model
     }
 
     /**
-     * [BARU] Mendapatkan semua riwayat pembayaran untuk penjualan ini.
+     * Mendapatkan semua riwayat pembayaran untuk penjualan ini.
      */
     public function payments(): MorphMany
     {
         return $this->morphMany(Payment::class, 'payable');
+    }
+
+    /**
+     * [BARU] Mendapatkan semua data retur untuk penjualan ini.
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
     }
 }

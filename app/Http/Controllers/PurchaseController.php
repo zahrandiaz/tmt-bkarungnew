@@ -4,18 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\PurchaseReturnDetail;
 use App\Models\Supplier;
 use App\Http\Requests\StorePurchaseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
-use App\Models\Setting; // [BARU] Import model Setting
+use App\Models\Setting;
 
 class PurchaseController extends Controller
 {
     /**
-     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     * [MODIFIKASI] Eager load relasi 'returns'.
      */
     public function index(Request $request)
     {
@@ -39,7 +40,8 @@ class PurchaseController extends Controller
             });
         }
         
-        $purchases = $query->with('supplier')->latest()->paginate(10)->appends($request->query());
+        // [PERBAIKAN] Tambahkan 'returns' ke dalam with()
+        $purchases = $query->with('supplier', 'returns')->latest()->paginate(10)->appends($request->query());
         
         return view('purchases.index', compact('purchases', 'search'));
     }
@@ -92,7 +94,6 @@ class PurchaseController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
-                // [BARU] Ambil pengaturan stok
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 
                 foreach ($validatedData['items'] as $item) {
@@ -104,7 +105,6 @@ class PurchaseController extends Controller
 
                     $product = Product::find($item['product_id']);
                     if ($product) {
-                        // [MODIFIKASI] Hanya tambah stok jika pengaturan aktif
                         if ($isStockEnabled === '1') {
                             $product->increment('stock', $item['quantity']);
                         }
@@ -119,9 +119,13 @@ class PurchaseController extends Controller
         }
     }
 
+    /**
+     * [MODIFIKASI] Eager load relasi 'returns'.
+     */
     public function show($id)
     {
-        $purchase = Purchase::withTrashed()->with(['supplier', 'user', 'details.product'])->findOrFail($id);
+        // [PERBAIKAN] Tambahkan 'returns' dan 'returns.details' ke dalam with()
+        $purchase = Purchase::withTrashed()->with(['supplier', 'user', 'details.product', 'returns', 'returns.details.product'])->findOrFail($id);
         return view('purchases.show', compact('purchase'));
     }
     
@@ -135,7 +139,6 @@ class PurchaseController extends Controller
     {
         $purchase = Purchase::onlyTrashed()->with('details.product')->findOrFail($id);
         
-        // [BARU] Logika pemulihan stok
         $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
         if ($isStockEnabled === '1') {
             foreach ($purchase->details as $detail) {
@@ -159,5 +162,42 @@ class PurchaseController extends Controller
         
         $purchase->forceDelete();
         return redirect()->route('purchases.index')->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dihapus permanen.");
+    }
+
+    public function getPurchaseDetailsForReturn(Purchase $purchase)
+    {
+        $purchase->load('supplier', 'details.product');
+
+        $purchase->details->each(function ($detail) use ($purchase) {
+            $totalReturned = PurchaseReturnDetail::join('purchase_returns', 'purchase_return_details.purchase_return_id', '=', 'purchase_returns.id')
+                ->where('purchase_returns.purchase_id', $purchase->id)
+                ->where('purchase_return_details.product_id', $detail->product_id)
+                ->sum('purchase_return_details.quantity');
+                
+            $detail->returnable_quantity = $detail->quantity - $totalReturned;
+        });
+
+        return response()->json($purchase);
+    }
+    
+    public function search(Request $request)
+    {
+        $query = $request->input('q');
+
+        $purchases = Purchase::with('supplier')
+            ->where('purchase_code', 'like', "%{$query}%")
+            ->orWhereHas('supplier', function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->whereNull('deleted_at')
+            ->limit(10)
+            ->get();
+
+        return response()->json($purchases->map(function ($purchase) {
+            return [
+                'id' => $purchase->id,
+                'text' => $purchase->purchase_code . ' - ' . $purchase->supplier->name,
+            ];
+        }));
     }
 }
