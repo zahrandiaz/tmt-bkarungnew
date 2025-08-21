@@ -19,6 +19,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PriceAdjustmentController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\PermissionController; // [BARU] Import PermissionController
+use App\Http\Controllers\SettingsController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -87,6 +88,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('price-adjustments', [PriceAdjustmentController::class, 'store'])->name('price-adjustments.store')->middleware('can:adjustment-price');
     Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index')->middleware('can:adjustment-stock');
     Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store')->middleware('can:adjustment-stock');
+
+    // Pengaturan Sistem
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index')->middleware('can:role-edit'); // Menggunakan permission yang sama dengan Hak Akses
+    Route::post('settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('can:role-edit');
 
     // Transaksi
     Route::delete('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel')->middleware('can:transaction-cancel');
