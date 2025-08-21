@@ -128,6 +128,35 @@
                         </table>
                     </div>
 
+                    @if($sale->returns->isNotEmpty())
+                    <div class="mt-8 pt-6 border-t">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Riwayat Retur Transaksi Ini</h3>
+                        <div class="space-y-4">
+                            @foreach($sale->returns as $return)
+                            <div class="p-4 border rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-semibold text-gray-800">{{ $return->return_code }}</p>
+                                        <p class="text-sm text-gray-500">{{ \Carbon\Carbon::parse($return->return_date)->isoFormat('D MMM YYYY, HH:mm') }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-semibold text-red-600">- {{ 'Rp ' . number_format($return->total_amount, 0, ',', '.') }}</p>
+                                        <a href="{{ route('sale-returns.show', $return->id) }}" class="text-sm text-blue-600 hover:underline">Detail Retur</a>
+                                    </div>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-600">
+                                    <ul class="list-disc pl-5">
+                                        @foreach($return->details as $detail)
+                                            <li>{{ $detail->product->name }} ({{ $detail->quantity }} pcs)</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
                 </div>
             </div>
         </div>

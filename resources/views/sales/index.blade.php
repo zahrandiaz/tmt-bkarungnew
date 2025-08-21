@@ -70,7 +70,12 @@
                                 @forelse ($sales as $sale)
                                 <tr class="bg-white border-b hover:bg-gray-50 {{ $sale->trashed() ? 'bg-red-50' : '' }}">
                                     <td class="px-6 py-4">{{ ($sales->currentPage() - 1) * $sales->perPage() + $loop->iteration }}</td>
-                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ $sale->invoice_number }}</th>
+                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                                        {{ $sale->invoice_number }}
+                                        @if($sale->returns->isNotEmpty())
+                                            <span class="bg-yellow-100 text-yellow-800 text-xs font-medium ms-2 px-2.5 py-0.5 rounded-full">Ada Retur</span>
+                                        @endif
+                                    </th>
                                     <td class="px-6 py-4">{{ \Carbon\Carbon::parse($sale->sale_date)->isoFormat('D MMM YYYY, HH:mm') }}</td>
                                     <td class="px-6 py-4">{{ $sale->customer->name }}</td>
                                     <td class="px-6 py-4">{{ 'Rp ' . number_format($sale->total_amount, 0, ',', '.') }}</td>

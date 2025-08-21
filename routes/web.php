@@ -18,8 +18,11 @@ use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PriceAdjustmentController;
 use App\Http\Controllers\StockAdjustmentController;
-use App\Http\Controllers\PermissionController; // [BARU] Import PermissionController
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\SettingsController;
+// [BARU] Import Controller Retur
+use App\Http\Controllers\Transaction\SaleReturnController;
+use App\Http\Controllers\Transaction\PurchaseReturnController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -71,7 +74,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/deposits/export-pdf', [ReportController::class, 'exportDepositsPdf'])->name('reports.deposits.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-csv', [ReportController::class, 'exportProfitAndLossCsv'])->name('reports.profit-loss.export.csv')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-pdf', [ReportController::class, 'exportProfitAndLossPdf'])->name('reports.profit-loss.export.pdf')->middleware('can:report-view-all');
-    
+
     // Manajemen Keuangan
     Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index')->middleware('can:finance-view');
     Route::get('receivables/{sale}/manage', [ReceivableController::class, 'manage'])->name('receivables.manage')->middleware('can:finance-manage-payment');
@@ -98,13 +101,19 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('purchases', PurchaseController::class)->except(['destroy'])->middleware('can:transaction-view');
     Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel')->middleware('can:transaction-cancel');
     Route::resource('sales', SaleController::class)->except(['destroy'])->middleware('can:transaction-view');
+    // [BARU] Rute untuk Modul Retur
+    Route::resource('sale-returns', SaleReturnController::class)->middleware('can:transaction-view'); // Sementara pakai permission yg sama
+    Route::resource('purchase-returns', PurchaseReturnController::class)->middleware('can:transaction-view'); // Sementara pakai permission yg sama
 
     // API
     Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search')->middleware('can:transaction-create');
     Route::get('/api/products/gallery', [ProductController::class, 'gallery'])->name('api.products.gallery')->middleware('can:transaction-create');
     Route::get('/api/reports/sale-details/{id}', [ReportController::class, 'getSaleDetails'])->name('api.reports.sale-details')->middleware('can:report-view-all');
     Route::get('/api/reports/purchase-details/{id}', [ReportController::class, 'getPurchaseDetails'])->name('api.reports.purchase-details')->middleware('can:report-view-all');
-    
+    Route::get('/api/sales/{sale}/details', [\App\Http\Controllers\SaleController::class, 'getSaleDetailsForReturn'])->name('api.sales.details')->middleware('can:transaction-create');
+    Route::get('/api/purchases/{purchase}/details', [\App\Http\Controllers\PurchaseController::class, 'getPurchaseDetailsForReturn'])->name('api.purchases.details')->middleware('can:transaction-create');
+    Route::get('/api/sales/search', [\App\Http\Controllers\SaleController::class, 'search'])->name('api.sales.search')->middleware('can:transaction-create');
+
     // Rute Cetak
     Route::get('sales/{id}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal')->middleware('can:transaction-view');
     Route::get('sales/{id}/download-pdf', [SaleController::class, 'downloadPDF'])->name('sales.downloadPDF')->middleware('can:transaction-view');

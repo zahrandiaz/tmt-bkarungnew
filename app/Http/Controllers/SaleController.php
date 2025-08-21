@@ -5,17 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\SaleReturnDetail;
 use App\Models\PurchaseDetail;
 use App\Http\Requests\StoreSaleRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\Setting; // [BARU] Import model Setting
+use App\Models\Setting;
 
 class SaleController extends Controller
 {
     /**
-     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
+     * [MODIFIKASI] Eager load relasi 'returns'.
      */
     public function index(Request $request)
     {
@@ -39,7 +40,8 @@ class SaleController extends Controller
             });
         }
         
-        $sales = $query->with('customer')->latest()->paginate(10)->appends($request->query());
+        // [PERBAIKAN] Tambahkan 'returns' ke dalam with()
+        $sales = $query->with('customer', 'returns')->latest()->paginate(10)->appends($request->query());
         
         return view('sales.index', compact('sales', 'search'));
     }
@@ -82,7 +84,6 @@ class SaleController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
-                // [BARU] Ambil pengaturan stok
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 
                 foreach ($validatedData['items'] as $item) {
@@ -105,7 +106,6 @@ class SaleController extends Controller
                         'purchase_price' => $hppToRecord,
                     ]);
 
-                    // [MODIFIKASI] Hanya kurangi stok jika pengaturan aktif
                     if ($isStockEnabled === '1') {
                         $product->decrement('stock', $item['quantity']);
                     }
@@ -119,9 +119,13 @@ class SaleController extends Controller
         }
     }
 
+    /**
+     * [MODIFIKASI] Eager load relasi 'returns'.
+     */
     public function show($id)
     {
-        $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product'])->findOrFail($id);
+        // [PERBAIKAN] Tambahkan 'returns' dan 'returns.details' ke dalam with()
+        $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product', 'returns', 'returns.details.product'])->findOrFail($id);
         return view('sales.show', compact('sale'));
     }
     
@@ -135,7 +139,6 @@ class SaleController extends Controller
     {
         $sale = Sale::onlyTrashed()->with('details.product')->findOrFail($id);
 
-        // [BARU] Logika pemulihan stok
         $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
         if ($isStockEnabled === '1') {
             foreach ($sale->details as $detail) {
@@ -170,5 +173,42 @@ class SaleController extends Controller
         $fileName = str_replace('/', '-', $sale->invoice_number) . '.pdf';
 
         return $pdf->download($fileName);
+    }
+
+    public function getSaleDetailsForReturn(Sale $sale)
+    {
+        $sale->load('customer', 'details.product');
+
+        $sale->details->each(function ($detail) use ($sale) {
+            $totalReturned = SaleReturnDetail::join('sale_returns', 'sale_return_details.sale_return_id', '=', 'sale_returns.id')
+                ->where('sale_returns.sale_id', $sale->id)
+                ->where('sale_return_details.product_id', $detail->product_id)
+                ->sum('sale_return_details.quantity');
+
+            $detail->returnable_quantity = $detail->quantity - $totalReturned;
+        });
+
+        return response()->json($sale);
+    }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('q');
+
+        $sales = Sale::with('customer')
+            ->where('invoice_number', 'like', "%{$query}%")
+            ->orWhereHas('customer', function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->whereNull('deleted_at')
+            ->limit(10)
+            ->get();
+
+        return response()->json($sales->map(function ($sale) {
+            return [
+                'id' => $sale->id,
+                'text' => $sale->invoice_number . ' - ' . $sale->customer->name,
+            ];
+        }));
     }
 }
