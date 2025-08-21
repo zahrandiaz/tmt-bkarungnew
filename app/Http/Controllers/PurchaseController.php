@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
+use App\Models\Setting; // [BARU] Import model Setting
 
 class PurchaseController extends Controller
 {
@@ -91,6 +92,9 @@ class PurchaseController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
+                // [BARU] Ambil pengaturan stok
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+
                 foreach ($validatedData['items'] as $item) {
                     $purchase->details()->create([
                         'product_id' => $item['product_id'],
@@ -100,7 +104,10 @@ class PurchaseController extends Controller
 
                     $product = Product::find($item['product_id']);
                     if ($product) {
-                        $product->increment('stock', $item['quantity']);
+                        // [MODIFIKASI] Hanya tambah stok jika pengaturan aktif
+                        if ($isStockEnabled === '1') {
+                            $product->increment('stock', $item['quantity']);
+                        }
                     }
                 }
             });
@@ -126,7 +133,18 @@ class PurchaseController extends Controller
 
     public function restore($id)
     {
-        $purchase = Purchase::onlyTrashed()->findOrFail($id);
+        $purchase = Purchase::onlyTrashed()->with('details.product')->findOrFail($id);
+        
+        // [BARU] Logika pemulihan stok
+        $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+        if ($isStockEnabled === '1') {
+            foreach ($purchase->details as $detail) {
+                if ($detail->product) {
+                    $detail->product->decrement('stock', $detail->quantity);
+                }
+            }
+        }
+        
         $purchase->restore();
         return redirect()->route('purchases.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dipulihkan.");
     }

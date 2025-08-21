@@ -10,6 +10,7 @@ use App\Http\Requests\StoreSaleRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Setting; // [BARU] Import model Setting
 
 class SaleController extends Controller
 {
@@ -81,6 +82,9 @@ class SaleController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
+                // [BARU] Ambil pengaturan stok
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+
                 foreach ($validatedData['items'] as $item) {
                     $product = Product::find($item['product_id']);
                     if (!$product) continue;
@@ -101,7 +105,10 @@ class SaleController extends Controller
                         'purchase_price' => $hppToRecord,
                     ]);
 
-                    $product->decrement('stock', $item['quantity']);
+                    // [MODIFIKASI] Hanya kurangi stok jika pengaturan aktif
+                    if ($isStockEnabled === '1') {
+                        $product->decrement('stock', $item['quantity']);
+                    }
                 }
             });
 
@@ -126,7 +133,18 @@ class SaleController extends Controller
 
     public function restore($id)
     {
-        $sale = Sale::onlyTrashed()->findOrFail($id);
+        $sale = Sale::onlyTrashed()->with('details.product')->findOrFail($id);
+
+        // [BARU] Logika pemulihan stok
+        $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+        if ($isStockEnabled === '1') {
+            foreach ($sale->details as $detail) {
+                if ($detail->product) {
+                    $detail->product->increment('stock', $detail->quantity);
+                }
+            }
+        }
+
         $sale->restore();
         return redirect()->route('sales.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dipulihkan.");
     }

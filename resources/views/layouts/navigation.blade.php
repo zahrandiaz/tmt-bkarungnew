@@ -31,6 +31,7 @@
                                 @endcan
                                 @can('role-edit')
                                     <x-dropdown-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-dropdown-link>
+                                    <x-dropdown-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-dropdown-link>
                                 @endcan
                                 <x-dropdown-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
@@ -157,8 +158,9 @@
                 @can('user-view')
                     <x-responsive-nav-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-responsive-nav-link>
                 @endcan
-                 @can('role-edit')
+                @can('role-edit')
                     <x-responsive-nav-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-responsive-nav-link>
                 @endcan
                 <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
