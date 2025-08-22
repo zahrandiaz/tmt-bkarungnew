@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Setting;
+use App\Models\Payment; // [BARU] Tambahkan model Payment
 
 class SaleController extends Controller
 {
@@ -34,9 +35,9 @@ class SaleController extends Controller
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($subQuery) use ($search) {
-                      $subQuery->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('customer', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
         
@@ -83,6 +84,17 @@ class SaleController extends Controller
                     'down_payment' => $validatedData['down_payment'] ?? null,
                     'total_paid' => $totalPaid,
                 ]);
+
+                // [PERBAIKAN BUG] Buat entri pembayaran awal jika ada DP atau Lunas
+                if ($totalPaid > 0) {
+                    $sale->payments()->create([
+                        'amount' => $totalPaid,
+                        'payment_date' => $validatedData['sale_date'],
+                        'payment_method' => $validatedData['payment_method'],
+                        'notes' => $paymentStatus === 'Lunas' ? 'Pembayaran lunas saat transaksi dibuat.' : 'Uang muka (DP) saat transaksi dibuat.',
+                        'user_id' => $request->user()->id,
+                    ]);
+                }
 
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 

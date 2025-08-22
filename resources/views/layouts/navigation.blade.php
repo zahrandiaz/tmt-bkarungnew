@@ -109,6 +109,8 @@
                                 <x-dropdown-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('reports.deposits')" :active="request()->routeIs('reports.deposits')">{{ __('Laporan Setoran') }}</x-dropdown-link>
+                                {{-- [BARU] Tautan Laporan Arus Kas --}}
+                                <x-dropdown-link :href="route('reports.cash-flow')" :active="request()->routeIs('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
                     </div>
@@ -233,6 +235,8 @@
                     <x-responsive-nav-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('reports.deposits')" :active="request()->routeIs('reports.deposits')">{{ __('Laporan Setoran') }}</x-responsive-nav-link>
+                    {{-- [BARU] Tautan Laporan Arus Kas --}}
+                    <x-responsive-nav-link :href="route('reports.cash-flow')" :active="request()->routeIs('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-responsive-nav-link>
                 </div>
             </div>
         @endcan

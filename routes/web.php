@@ -63,6 +63,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware('can:report-view-all');
     Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss')->middleware('can:report-view-all');
     Route::get('reports/deposits', [ReportController::class, 'depositReport'])->name('reports.deposits')->middleware('can:report-view-all');
+    // [BARU] Rute untuk Laporan Arus Kas
+    Route::get('reports/cash-flow', [ReportController::class, 'cashFlowReport'])->name('reports.cash-flow')->middleware('can:report-view-all');
 
     // Ekspor
     Route::get('reports/sales/export-csv', [ReportController::class, 'exportSalesCsv'])->name('reports.sales.export.csv')->middleware('can:report-view-all');
@@ -74,6 +76,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/deposits/export-pdf', [ReportController::class, 'exportDepositsPdf'])->name('reports.deposits.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-csv', [ReportController::class, 'exportProfitAndLossCsv'])->name('reports.profit-loss.export.csv')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-pdf', [ReportController::class, 'exportProfitAndLossPdf'])->name('reports.profit-loss.export.pdf')->middleware('can:report-view-all');
+    // [BARU] Rute Ekspor untuk Laporan Arus Kas (akan dibuat nanti)
+    // Route::get('reports/cash-flow/export-csv', [ReportController::class, 'exportCashFlowCsv'])->name('reports.cash-flow.export.csv')->middleware('can:report-view-all');
+    // Route::get('reports/cash-flow/export-pdf', [ReportController::class, 'exportCashFlowPdf'])->name('reports.cash-flow.export.pdf')->middleware('can:report-view-all');
 
     // Manajemen Keuangan
     Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index')->middleware('can:finance-view');
