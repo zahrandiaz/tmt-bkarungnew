@@ -9,12 +9,14 @@ use App\Models\Purchase;
 use App\Models\PurchaseDetail;
 use App\Models\Product;
 use App\Models\Expense;
+use App\Models\Payment;
 use Carbon\Carbon;
 use App\Exports\SalesExport;
 use App\Exports\PurchasesExport;
 use App\Exports\StockExport;
 use App\Exports\DepositsExport;
 use App\Exports\ProfitAndLossExport;
+use App\Exports\CashFlowExport; // [BARU]
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -48,6 +50,7 @@ class ReportController extends Controller
         return [Carbon::today(), Carbon::today()];
     }
 
+    // ... (metode salesReport, purchasesReport, stockReport, profitAndLossReport, depositReport tetap sama) ...
     public function salesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -76,9 +79,8 @@ class ReportController extends Controller
         }
         $sales = $tableQuery->latest()->paginate(10)->appends($request->query());
 
-        // [BARU V1.15.0] Hitung laba untuk setiap transaksi yang ditampilkan
         foreach ($sales as $sale) {
-            if (!$sale->trashed()) { // Hanya hitung laba untuk transaksi yang tidak dibatalkan
+            if (!$sale->trashed()) { 
                 $totalHpp = $sale->details->sum(function ($detail) {
                     return $detail->quantity * $detail->purchase_price;
                 });
@@ -191,27 +193,22 @@ class ReportController extends Controller
         ]);
     }
 
-    // [BARU] Method untuk Laporan Setoran
     public function depositReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        // Query dasar untuk penjualan yang tidak dibatalkan dalam rentang tanggal
         $salesQuery = Sale::query()
             ->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
 
-        // Kalkulasi total modal (HPP) untuk kartu statistik
         $totalDeposit = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
             $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         })->sum(DB::raw('quantity * purchase_price'));
         
-        // Ambil data untuk tabel dengan paginasi
         $sales = (clone $salesQuery)->with('customer', 'details')
             ->latest()
             ->paginate(10)
             ->appends($request->query());
 
-        // Hitung total modal per transaksi untuk ditampilkan di tabel
         foreach ($sales as $sale) {
             $sale->total_modal = $sale->details->sum(function ($detail) {
                 return $detail->quantity * $detail->purchase_price;
@@ -226,8 +223,85 @@ class ReportController extends Controller
             'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
         ]);
     }
+
+    // [REFAKTOR] Pindahkan logika ke private method agar bisa dipakai ulang
+    private function getCashFlowData(Carbon $startDate, Carbon $endDate): array
+    {
+        $startOfDay = $startDate->copy()->startOfDay();
+        $endOfDay = $endDate->copy()->endOfDay();
+
+        // Data Arus Kas
+        $cashInflowsQuery = Payment::query()->where('payable_type', Sale::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
+        $purchaseOutflowsQuery = Payment::query()->where('payable_type', Purchase::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
+        $expenseOutflowsQuery = Expense::query()->whereBetween('expense_date', [$startOfDay, $endOfDay]);
+
+        // Data Piutang & Utang
+        $receivablesQuery = Sale::query()->where('payment_status', 'Belum Lunas')->whereBetween('sale_date', [$startOfDay, $endOfDay]);
+        $payablesQuery = Purchase::query()->where('payment_status', 'Belum Lunas')->whereBetween('purchase_date', [$startOfDay, $endOfDay]);
+
+        // Kalkulasi Total
+        $totalInflow = (clone $cashInflowsQuery)->sum('amount');
+        $totalPurchaseOutflow = (clone $purchaseOutflowsQuery)->sum('amount');
+        $totalExpenseOutflow = (clone $expenseOutflowsQuery)->sum('amount');
+        $totalOutflow = $totalPurchaseOutflow + $totalExpenseOutflow;
+        $netCashFlow = $totalInflow - $totalOutflow;
+        $totalReceivables = (clone $receivablesQuery)->sum(DB::raw('total_amount - total_paid'));
+        $totalPayables = (clone $payablesQuery)->sum(DB::raw('total_amount - total_paid'));
+
+        return [
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
+            'totalInflow' => $totalInflow,
+            'totalOutflow' => $totalOutflow,
+            'netCashFlow' => $netCashFlow,
+            'inflows' => (clone $cashInflowsQuery)->with('payable.customer')->latest('payment_date')->get(),
+            'purchaseOutflows' => (clone $purchaseOutflowsQuery)->with('payable.supplier')->latest('payment_date')->get(),
+            'expenseOutflows' => (clone $expenseOutflowsQuery)->with('category')->latest('expense_date')->get(),
+            'totalReceivables' => $totalReceivables,
+            'totalPayables' => $totalPayables,
+            'receivables' => (clone $receivablesQuery)->with('customer')->latest('sale_date')->get(),
+            'payables' => (clone $payablesQuery)->with('supplier')->latest('purchase_date')->get(),
+        ];
+    }
+
+    public function cashFlowReport(Request $request)
+    {
+        [$startDate, $endDate] = $this->getDateRange($request);
+        
+        // [BARU] Cek jika ada permintaan ekspor
+        if ($request->has('export')) {
+            if ($request->input('export') === 'csv') {
+                return $this->exportCashFlowCsv($startDate, $endDate);
+            }
+            if ($request->input('export') === 'pdf') {
+                return $this->exportCashFlowPdf($startDate, $endDate);
+            }
+        }
+
+        $data = $this->getCashFlowData($startDate, $endDate);
+        $data['period'] = $request->input('period', $request->has('start_date') ? null : 'today');
+
+        return view('reports.cash_flow', $data);
+    }
+
+    // [BARU] Method Ekspor Arus Kas (CSV)
+    private function exportCashFlowCsv(Carbon $startDate, Carbon $endDate)
+    {
+        $data = $this->getCashFlowData($startDate, $endDate);
+        $fileName = 'laporan-arus-kas-' . Carbon::now()->format('Y-m-d') . '.csv';
+        return Excel::download(new CashFlowExport($data), $fileName);
+    }
+
+    // [BARU] Method Ekspor Arus Kas (PDF)
+    private function exportCashFlowPdf(Carbon $startDate, Carbon $endDate)
+    {
+        $data = $this->getCashFlowData($startDate, $endDate);
+        $pdf = Pdf::loadView('reports.pdf.cash_flow', $data);
+        $fileName = 'laporan-arus-kas-' . Carbon::now()->format('Y-m-d') . '.pdf';
+        return $pdf->stream($fileName);
+    }
     
-    // [BARU V1.15.0] Method untuk API detail penjualan
+    // ... (sisa metode getSaleDetails, getPurchaseDetails, dan metode ekspor lainnya tetap sama) ...
     public function getSaleDetails($id)
     {
         $sale = Sale::withTrashed()->with('details.product')->find($id);
@@ -237,7 +311,6 @@ class ReportController extends Controller
         return response()->json($sale->details);
     }
 
-    // [BARU V1.15.0] Method untuk API detail pembelian
     public function getPurchaseDetails($id)
     {
         $purchase = Purchase::withTrashed()->with('details.product')->find($id);
@@ -247,7 +320,6 @@ class ReportController extends Controller
         return response()->json($purchase->details);
     }
 
-    // [GANTI NAMA] Ubah nama method dari exportSales menjadi exportSalesCsv
     public function exportSalesCsv(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -256,7 +328,6 @@ class ReportController extends Controller
         return Excel::download(new SalesExport($startDate, $endDate), $fileName);
     }
 
-    // [BARU] Method untuk ekspor Laporan Penjualan (PDF)
     public function exportSalesPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -276,7 +347,7 @@ class ReportController extends Controller
 
         $tableQuery = Sale::withTrashed()->with(['customer', 'details']);
         $tableQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        $sales = $tableQuery->latest()->get(); // Ambil semua data tanpa paginasi
+        $sales = $tableQuery->latest()->get();
 
         foreach ($sales as $sale) {
             if (!$sale->trashed()) {
@@ -301,7 +372,6 @@ class ReportController extends Controller
         return $pdf->stream($fileName);
     }
 
-    // [GANTI NAMA] Ubah nama method dari exportPurchases menjadi exportPurchasesCsv
     public function exportPurchasesCsv(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -310,7 +380,6 @@ class ReportController extends Controller
         return Excel::download(new PurchasesExport($startDate, $endDate), $fileName);
     }
 
-    // [BARU] Method untuk ekspor Laporan Pembelian (PDF)
     public function exportPurchasesPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -324,7 +393,7 @@ class ReportController extends Controller
         
         $tableQuery = Purchase::withTrashed()->with('supplier');
         $tableQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        $purchases = $tableQuery->latest()->get(); // Ambil semua data tanpa paginasi
+        $purchases = $tableQuery->latest()->get();
 
         $pdf = Pdf::loadView('reports.pdf.purchases', [
             'purchases' => $purchases,
@@ -344,7 +413,6 @@ class ReportController extends Controller
         return Excel::download(new StockExport(), $fileName);
     }
 
-    // [BARU] Method Ekspor Laporan Setoran (CSV)
     public function exportDepositsCsv(Request $request)
     {
         $startDate = $request->input('start_date');
@@ -354,7 +422,6 @@ class ReportController extends Controller
         return Excel::download(new DepositsExport($startDate, $endDate), $fileName);
     }
 
-    // [BARU] Method Ekspor Laporan Setoran (PDF)
     public function exportDepositsPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -366,7 +433,6 @@ class ReportController extends Controller
             $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
         })->sum(DB::raw('quantity * purchase_price'));
         
-        // Ambil SEMUA data untuk PDF (tanpa paginasi)
         $sales = (clone $salesQuery)->with('customer', 'details')->latest()->get();
 
         foreach ($sales as $sale) {
@@ -386,19 +452,16 @@ class ReportController extends Controller
         return $pdf->stream($fileName);
     }
 
-    // [BARU] Method Ekspor Laporan Laba Rugi (CSV)
     public function exportProfitAndLossCsv(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        // Mengambil data dengan logika yang sama seperti di profitAndLossReport
         $data = $this->getProfitAndLossData($startDate, $endDate);
 
         $fileName = 'laporan-laba-rugi-' . Carbon::now()->format('Y-m-d') . '.csv';
         return Excel::download(new ProfitAndLossExport($data), $fileName);
     }
 
-    // [BARU] Method Ekspor Laporan Laba Rugi (PDF)
     public function exportProfitAndLossPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -411,7 +474,6 @@ class ReportController extends Controller
         return $pdf->stream($fileName);
     }
 
-    // [BARU] Private helper method untuk menghindari duplikasi kode
     private function getProfitAndLossData(Carbon $startDate, Carbon $endDate): array
     {
         $salesDetailsQuery = SaleDetail::query()

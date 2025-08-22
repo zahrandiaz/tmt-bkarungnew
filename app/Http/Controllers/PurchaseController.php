@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 use App\Models\Setting;
+use App\Models\Payment; // [BARU] Tambahkan model Payment
 
 class PurchaseController extends Controller
 {
@@ -34,9 +35,9 @@ class PurchaseController extends Controller
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('purchase_code', 'like', "%{$search}%")
-                  ->orWhereHas('supplier', function ($subQuery) use ($search) {
-                      $subQuery->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('supplier', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
         
@@ -93,6 +94,17 @@ class PurchaseController extends Controller
                     'down_payment' => $validatedData['down_payment'] ?? null,
                     'total_paid' => $totalPaid,
                 ]);
+
+                // [PERBAIKAN BUG] Buat entri pembayaran awal jika ada DP atau Lunas
+                if ($totalPaid > 0) {
+                    $purchase->payments()->create([
+                        'amount' => $totalPaid,
+                        'payment_date' => $validatedData['purchase_date'],
+                        'payment_method' => $validatedData['payment_method'],
+                        'notes' => $paymentStatus === 'Lunas' ? 'Pembayaran lunas saat transaksi dibuat.' : 'Uang muka (DP) saat transaksi dibuat.',
+                        'user_id' => $request->user()->id,
+                    ]);
+                }
 
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 
