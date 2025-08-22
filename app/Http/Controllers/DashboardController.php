@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Product; // <-- PERBAIKAN: Menggunakan model Product
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Sale;
 use Carbon\Carbon;
@@ -29,7 +29,13 @@ class DashboardController extends Controller
         $totalCustomers = Customer::count();
 
         // 4. Data Produk
-        $totalProducts = Product::count(); // <-- PERBAIKAN: Menggunakan model Product
+        $totalProducts = Product::count();
+
+        // 5. [DIPERBAIKI] Data Produk Stok Kritis
+        $criticalStockProducts = Product::where('stock', '<=', DB::raw('min_stock_level'))
+                                        ->where('min_stock_level', '>', 0) // Hanya ambil produk yg punya pengaturan stok minimum
+                                        ->orderBy('stock', 'asc') // Urutkan dari stok paling sedikit
+                                        ->get();
 
         return view('dashboard', [
             'totalTodaySales' => $totalTodaySales,
@@ -37,6 +43,7 @@ class DashboardController extends Controller
             'countTodayPurchases' => $countTodayPurchases,
             'totalCustomers' => $totalCustomers,
             'totalProducts' => $totalProducts,
+            'criticalStockProducts' => $criticalStockProducts,
         ]);
     }
 }
