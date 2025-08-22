@@ -38,6 +38,9 @@ class PermissionSeeder extends Seeder
 
             // Fitur Lanjutan
             'adjustment-price', 'adjustment-stock',
+
+            // [BARU] Log Aktivitas
+            'log-view', 'log-delete',
         ];
 
         // [MODIFIKASI V2.0.0] Gunakan firstOrCreate untuk mencegah eror duplikat

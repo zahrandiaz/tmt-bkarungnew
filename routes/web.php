@@ -20,10 +20,9 @@ use App\Http\Controllers\PriceAdjustmentController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\SettingsController;
-// [BARU] Import Controller Retur
 use App\Http\Controllers\Transaction\SaleReturnController;
 use App\Http\Controllers\Transaction\PurchaseReturnController;
-
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('users', UserController::class)->middleware('can:user-view');
     Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index')->middleware('can:role-edit');
     Route::post('permissions', [PermissionController::class, 'update'])->name('permissions.update')->middleware('can:role-edit');
+
+    // [BARU] Log Aktivitas
+    Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index')->middleware('can:log-view');
+    Route::delete('activity-log/reset', [ActivityLogController::class, 'reset'])->name('activity-log.reset')->middleware('can:log-delete');
 
     // Hapus & Pulihkan Transaksi
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy')->middleware('can:transaction-delete-permanent');
@@ -63,7 +66,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware('can:report-view-all');
     Route::get('reports/profit-loss', [ReportController::class, 'profitAndLossReport'])->name('reports.profit-loss')->middleware('can:report-view-all');
     Route::get('reports/deposits', [ReportController::class, 'depositReport'])->name('reports.deposits')->middleware('can:report-view-all');
-    // [BARU] Rute untuk Laporan Arus Kas
     Route::get('reports/cash-flow', [ReportController::class, 'cashFlowReport'])->name('reports.cash-flow')->middleware('can:report-view-all');
 
     // Ekspor
@@ -76,7 +78,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/deposits/export-pdf', [ReportController::class, 'exportDepositsPdf'])->name('reports.deposits.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-csv', [ReportController::class, 'exportProfitAndLossCsv'])->name('reports.profit-loss.export.csv')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-pdf', [ReportController::class, 'exportProfitAndLossPdf'])->name('reports.profit-loss.export.pdf')->middleware('can:report-view-all');
-    // [BARU] Rute Ekspor untuk Laporan Arus Kas (akan dibuat nanti)
+    // Rute Ekspor untuk Laporan Arus Kas (akan dibuat nanti)
     // Route::get('reports/cash-flow/export-csv', [ReportController::class, 'exportCashFlowCsv'])->name('reports.cash-flow.export.csv')->middleware('can:report-view-all');
     // Route::get('reports/cash-flow/export-pdf', [ReportController::class, 'exportCashFlowPdf'])->name('reports.cash-flow.export.pdf')->middleware('can:report-view-all');
 
@@ -84,11 +86,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index')->middleware('can:finance-view');
     Route::get('receivables/{sale}/manage', [ReceivableController::class, 'manage'])->name('receivables.manage')->middleware('can:finance-manage-payment');
     Route::post('receivables/{sale}/payments', [ReceivableController::class, 'storePayment'])->name('receivables.payments.store')->middleware('can:finance-manage-payment');
-
     Route::get('debts', [DebtController::class, 'index'])->name('debts.index')->middleware('can:finance-view');
     Route::get('debts/{purchase}/manage', [DebtController::class, 'manage'])->name('debts.manage')->middleware('can:finance-manage-payment');
     Route::post('debts/{purchase}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store')->middleware('can:finance-manage-payment');
-
     Route::resource('expenses', ExpenseController::class)->middleware('can:finance-crud-expense');
 
     // Penyesuaian
@@ -98,7 +98,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store')->middleware('can:adjustment-stock');
 
     // Pengaturan Sistem
-    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index')->middleware('can:role-edit'); // Menggunakan permission yang sama dengan Hak Akses
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index')->middleware('can:role-edit');
     Route::post('settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('can:role-edit');
 
     // Transaksi
@@ -106,9 +106,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('purchases', PurchaseController::class)->except(['destroy'])->middleware('can:transaction-view');
     Route::delete('sales/{sale}/cancel', [SaleController::class, 'cancel'])->name('sales.cancel')->middleware('can:transaction-cancel');
     Route::resource('sales', SaleController::class)->except(['destroy'])->middleware('can:transaction-view');
-    // [BARU] Rute untuk Modul Retur
-    Route::resource('sale-returns', SaleReturnController::class)->middleware('can:transaction-view'); // Sementara pakai permission yg sama
-    Route::resource('purchase-returns', PurchaseReturnController::class)->middleware('can:transaction-view'); // Sementara pakai permission yg sama
+    Route::resource('sale-returns', SaleReturnController::class)->middleware('can:transaction-view');
+    Route::resource('purchase-returns', PurchaseReturnController::class)->middleware('can:transaction-view');
 
     // API
     Route::get('/api/products/search', [ProductController::class, 'search'])->name('api.products.search')->middleware('can:transaction-create');

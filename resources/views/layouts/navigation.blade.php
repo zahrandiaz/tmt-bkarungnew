@@ -33,6 +33,10 @@
                                     <x-dropdown-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-dropdown-link>
                                     <x-dropdown-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-dropdown-link>
                                 @endcan
+                                {{-- [BARU] Tautan Log Aktivitas --}}
+                                @can('log-view')
+                                    <x-dropdown-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.index')">{{ __('Log Aktivitas') }}</x-dropdown-link>
+                                @endcan
                                 <x-dropdown-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
@@ -109,7 +113,6 @@
                                 <x-dropdown-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('reports.deposits')" :active="request()->routeIs('reports.deposits')">{{ __('Laporan Setoran') }}</x-dropdown-link>
-                                {{-- [BARU] Tautan Laporan Arus Kas --}}
                                 <x-dropdown-link :href="route('reports.cash-flow')" :active="request()->routeIs('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-dropdown-link>
                             </x-slot>
                         </x-dropdown>
@@ -178,6 +181,10 @@
                     <x-responsive-nav-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-responsive-nav-link>
                 @endcan
+                {{-- [BARU] Tautan Log Aktivitas (Responsive) --}}
+                @can('log-view')
+                    <x-responsive-nav-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.index')">{{ __('Log Aktivitas') }}</x-responsive-nav-link>
+                @endcan
                 <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
@@ -235,7 +242,6 @@
                     <x-responsive-nav-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('reports.deposits')" :active="request()->routeIs('reports.deposits')">{{ __('Laporan Setoran') }}</x-responsive-nav-link>
-                    {{-- [BARU] Tautan Laporan Arus Kas --}}
                     <x-responsive-nav-link :href="route('reports.cash-flow')" :active="request()->routeIs('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-responsive-nav-link>
                 </div>
             </div>
