@@ -8,10 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+// [BARU] Import trait dan LogOptions dari Spatie Activitylog
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Purchase extends Model
 {
-    use HasFactory, SoftDeletes;
+    // [BARU] Gunakan trait LogsActivity
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'purchase_code',
@@ -27,6 +31,15 @@ class Purchase extends Model
         'notes',
         'user_id',
     ];
+
+    // [BARU] Konfigurasi untuk Activity Log
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable() // Mencatat semua atribut yang ada di $fillable
+            ->setDescriptionForEvent(fn(string $eventName) => "Transaksi Pembelian '{$this->purchase_code}' telah di-{$eventName}")
+            ->useLogName('Purchase'); // Nama log untuk mempermudah filter
+    }
 
     /**
      * Mendapatkan supplier yang terkait dengan pembelian ini.

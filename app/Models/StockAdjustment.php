@@ -5,10 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+// [BARU] Import trait dan LogOptions dari Spatie Activitylog
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class StockAdjustment extends Model
 {
-    use HasFactory;
+    // [BARU] Gunakan trait LogsActivity
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'product_id',
@@ -17,6 +21,22 @@ class StockAdjustment extends Model
         'quantity',
         'reason',
     ];
+
+    // [BARU] Konfigurasi untuk Activity Log
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->setDescriptionForEvent(function(string $eventName) {
+                // Eager load relasi produk agar nama produk bisa diambil
+                $this->load('product');
+                $productName = $this->product->name ?? 'N/A';
+                $typeText = $this->type === 'penambahan' ? 'Penambahan' : 'Pengurangan';
+
+                return "{$typeText} stok sebanyak {$this->quantity} untuk produk '{$productName}' telah di-{$eventName}";
+            })
+            ->useLogName('StockAdjustment');
+    }
 
     /**
      * Mendapatkan produk yang terkait dengan penyesuaian stok.

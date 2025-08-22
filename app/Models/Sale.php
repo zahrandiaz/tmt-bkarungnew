@@ -8,10 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+// [BARU] Import trait dan LogOptions dari Spatie Activitylog
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Sale extends Model
 {
-    use HasFactory, SoftDeletes;
+    // [BARU] Gunakan trait LogsActivity
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'invoice_number',
@@ -25,6 +29,15 @@ class Sale extends Model
         'notes',
         'user_id',
     ];
+
+    // [BARU] Konfigurasi untuk Activity Log
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable() // Mencatat semua atribut yang ada di $fillable
+            ->setDescriptionForEvent(fn(string $eventName) => "Transaksi Penjualan '{$this->invoice_number}' telah di-{$eventName}")
+            ->useLogName('Sale'); // Nama log untuk mempermudah filter
+    }
 
     /**
      * Mendapatkan pelanggan yang terkait dengan penjualan ini.

@@ -98,7 +98,14 @@
                                         @forelse ($inflows as $inflow)
                                             <tr>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ \Carbon\Carbon::parse($inflow->payment_date)->isoFormat('D MMM Y') }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Pembayaran dari {{ $inflow->payable->customer->name ?? 'N/A' }} ({{ $inflow->payable->invoice_number }})</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {{-- [PERBAIKAN BUG] Cek apakah transaksi terkait masih ada --}}
+                                                    @if ($inflow->payable)
+                                                        Pembayaran dari {{ $inflow->payable->customer->name ?? 'N/A' }} ({{ $inflow->payable->invoice_number }})
+                                                    @else
+                                                        Pembayaran untuk Transaksi Penjualan [Telah Dihapus]
+                                                    @endif
+                                                </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">Rp {{ number_format($inflow->amount, 0, ',', '.') }}</td>
                                             </tr>
                                         @empty
@@ -122,19 +129,36 @@
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         @php
                                             $allOutflows = $purchaseOutflows->map(function ($item) {
-                                                $item->date = $item->payment_date;
-                                                $item->description = 'Pembayaran ke ' . ($item->payable->supplier->name ?? 'N/A') . ' (' . $item->payable->purchase_code . ')';
-                                                return $item;
+                                                return (object) [ // Ubah menjadi object untuk konsistensi
+                                                    'date' => $item->payment_date,
+                                                    'payable' => $item->payable, // Kirim seluruh objek payable
+                                                    'amount' => $item->amount,
+                                                    'type' => 'purchase'
+                                                ];
                                             })->concat($expenseOutflows->map(function ($item) {
-                                                $item->date = $item->expense_date;
-                                                $item->description = 'Biaya: ' . $item->name . ' (' . $item->category->name . ')';
-                                                return $item;
+                                                return (object) [
+                                                    'date' => $item->expense_date,
+                                                    'payable' => $item, // Kirim seluruh objek expense
+                                                    'amount' => $item->amount,
+                                                    'type' => 'expense'
+                                                ];
                                             }))->sortByDesc('date');
                                         @endphp
                                         @forelse ($allOutflows as $outflow)
                                             <tr>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ \Carbon\Carbon::parse($outflow->date)->isoFormat('D MMM Y') }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $outflow->description }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {{-- [PERBAIKAN BUG] Cek berdasarkan tipe dan apakah data terkait masih ada --}}
+                                                    @if ($outflow->type === 'purchase')
+                                                        @if ($outflow->payable)
+                                                            Pembayaran ke {{ $outflow->payable->supplier->name ?? 'N/A' }} ({{ $outflow->payable->purchase_code }})
+                                                        @else
+                                                            Pembayaran untuk Transaksi Pembelian [Telah Dihapus]
+                                                        @endif
+                                                    @elseif ($outflow->type === 'expense')
+                                                        Biaya: {{ $outflow->payable->name }} ({{ $outflow->payable->category->name }})
+                                                    @endif
+                                                </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">Rp {{ number_format($outflow->amount, 0, ',', '.') }}</td>
                                             </tr>
                                         @empty

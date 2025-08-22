@@ -6,12 +6,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+// [BARU] Import trait dan LogOptions dari Spatie Activitylog
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class SaleReturn extends Model
 {
-    use HasFactory;
+    // [BARU] Gunakan trait LogsActivity
+    use HasFactory, LogsActivity;
 
     protected $guarded = [];
+
+    // [BARU] Konfigurasi untuk Activity Log
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logUnguarded() // Mencatat semua atribut karena menggunakan $guarded
+            ->setDescriptionForEvent(fn(string $eventName) => "Retur Penjualan '{$this->return_code}' telah di-{$eventName}")
+            ->useLogName('SaleReturn');
+    }
 
     /**
      * Get the sale associated with the sale return.
