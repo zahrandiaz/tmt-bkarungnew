@@ -12,13 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Setting;
-use App\Models\Payment; // [BARU] Tambahkan model Payment
+use App\Models\Payment;
 
 class SaleController extends Controller
 {
-    /**
-     * [MODIFIKASI] Eager load relasi 'returns'.
-     */
     public function index(Request $request)
     {
         $status = $request->query('status');
@@ -41,7 +38,6 @@ class SaleController extends Controller
             });
         }
         
-        // [PERBAIKAN] Tambahkan 'returns' ke dalam with()
         $sales = $query->with('customer', 'returns')->latest()->paginate(10)->appends($request->query());
         
         return view('sales.index', compact('sales', 'search'));
@@ -59,6 +55,7 @@ class SaleController extends Controller
 
         try {
             DB::transaction(function () use ($validatedData, $request) {
+                // ... (Logika pembayaran dan invoice tidak berubah) ...
                 $totalAmount = $validatedData['total_amount'];
                 $paymentStatusRaw = $validatedData['payment_status'];
                 $paymentStatus = ucwords(str_replace('_', ' ', $paymentStatusRaw));
@@ -85,7 +82,6 @@ class SaleController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
-                // [PERBAIKAN BUG] Buat entri pembayaran awal jika ada DP atau Lunas
                 if ($totalPaid > 0) {
                     $sale->payments()->create([
                         'amount' => $totalPaid,
@@ -98,18 +94,28 @@ class SaleController extends Controller
 
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 
+                // [OPTIMALISASI #4] Ambil semua HPP dalam satu query
+                $productIds = array_column($validatedData['items'], 'product_id');
+                $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+                $latestPurchasePrices = PurchaseDetail::select('product_id', DB::raw('MAX(id) as max_id'))
+                    ->whereIn('product_id', $productIds)
+                    ->whereHas('purchase', function ($query) use ($sale) {
+                        $query->where('purchase_date', '<=', $sale->sale_date);
+                    })
+                    ->groupBy('product_id');
+
+                $hppMap = PurchaseDetail::joinSub($latestPurchasePrices, 'latest_purchases', function ($join) {
+                        $join->on('purchase_details.id', '=', 'latest_purchases.max_id');
+                    })
+                    ->pluck('purchase_details.purchase_price', 'purchase_details.product_id');
+
                 foreach ($validatedData['items'] as $item) {
-                    $product = Product::find($item['product_id']);
+                    $product = $products->get($item['product_id']);
                     if (!$product) continue;
 
-                    $lastPurchaseDetail = PurchaseDetail::where('product_id', $product->id)
-                        ->whereHas('purchase', function ($query) use ($sale) {
-                            $query->where('purchase_date', '<=', $sale->sale_date);
-                        })
-                        ->latest('created_at')
-                        ->first();
-
-                    $hppToRecord = $lastPurchaseDetail ? $lastPurchaseDetail->purchase_price : $product->purchase_price;
+                    // Gunakan HPP dari map, atau fallback ke harga beli di master produk
+                    $hppToRecord = $hppMap->get($product->id, $product->purchase_price);
 
                     $sale->details()->create([
                         'product_id' => $item['product_id'],
@@ -131,37 +137,70 @@ class SaleController extends Controller
         }
     }
 
-    /**
-     * [MODIFIKASI] Eager load relasi 'returns'.
-     */
     public function show($id)
     {
-        // [PERBAIKAN] Tambahkan 'returns' dan 'returns.details' ke dalam with()
         $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product', 'returns', 'returns.details.product'])->findOrFail($id);
         return view('sales.show', compact('sale'));
     }
     
+    // [PERBAIKAN BUG #1] Method cancel() yang sudah diperbaiki
     public function cancel(Sale $sale)
     {
-        $sale->delete(); 
-        return redirect()->route('sales.index', ['status' => 'selesai'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dibatalkan.");
+        try {
+            DB::transaction(function () use ($sale) {
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+
+                if ($isStockEnabled === '1') {
+                    // Kembalikan stok untuk setiap item detail
+                    foreach ($sale->details as $detail) {
+                        if ($detail->product) {
+                            $detail->product->increment('stock', $detail->quantity);
+                        }
+                    }
+                }
+                $sale->delete(); // Lakukan soft delete
+            });
+
+            return redirect()->route('sales.index', ['status' => 'selesai'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dibatalkan.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal membatalkan transaksi: ' . $e->getMessage());
+        }
     }
 
+    // [PERBAIKAN BUG #2] Method restore() yang sudah diperbaiki
     public function restore($id)
     {
         $sale = Sale::onlyTrashed()->with('details.product')->findOrFail($id);
+        
+        try {
+            DB::transaction(function () use ($sale) {
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+                
+                if ($isStockEnabled === '1') {
+                    // Tahap 1: Validasi semua stok sebelum melakukan aksi
+                    foreach ($sale->details as $detail) {
+                        if ($detail->product && $detail->product->stock < $detail->quantity) {
+                            throw new \Exception("Stok '{$detail->product->name}' tidak cukup untuk memulihkan transaksi.");
+                        }
+                    }
 
-        $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
-        if ($isStockEnabled === '1') {
-            foreach ($sale->details as $detail) {
-                if ($detail->product) {
-                    $detail->product->increment('stock', $detail->quantity);
+                    // Tahap 2: Jika semua stok aman, baru lakukan decrement
+                    foreach ($sale->details as $detail) {
+                        if ($detail->product) {
+                            $detail->product->decrement('stock', $detail->quantity);
+                        }
+                    }
                 }
-            }
-        }
 
-        $sale->restore();
-        return redirect()->route('sales.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dipulihkan.");
+                $sale->restore();
+            });
+
+            return redirect()->route('sales.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan invoice {$sale->invoice_number} berhasil dipulihkan.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memulihkan transaksi: ' . $e->getMessage());
+        }
     }
     
     public function destroy($id)
@@ -181,32 +220,26 @@ class SaleController extends Controller
     {
         $sale = Sale::withTrashed()->with(['customer', 'user', 'details.product'])->findOrFail($id);
         $pdf = Pdf::loadView('sales.print-pdf', compact('sale'));
-        
         $fileName = str_replace('/', '-', $sale->invoice_number) . '.pdf';
-
         return $pdf->download($fileName);
     }
 
     public function getSaleDetailsForReturn(Sale $sale)
     {
         $sale->load('customer', 'details.product');
-
         $sale->details->each(function ($detail) use ($sale) {
             $totalReturned = SaleReturnDetail::join('sale_returns', 'sale_return_details.sale_return_id', '=', 'sale_returns.id')
                 ->where('sale_returns.sale_id', $sale->id)
                 ->where('sale_return_details.product_id', $detail->product_id)
                 ->sum('sale_return_details.quantity');
-
             $detail->returnable_quantity = $detail->quantity - $totalReturned;
         });
-
         return response()->json($sale);
     }
 
     public function search(Request $request)
     {
         $query = $request->input('q');
-
         $sales = Sale::with('customer')
             ->where('invoice_number', 'like', "%{$query}%")
             ->orWhereHas('customer', function ($q) use ($query) {
@@ -215,7 +248,6 @@ class SaleController extends Controller
             ->whereNull('deleted_at')
             ->limit(10)
             ->get();
-
         return response()->json($sales->map(function ($sale) {
             return [
                 'id' => $sale->id,
