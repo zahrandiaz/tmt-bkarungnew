@@ -39,11 +39,14 @@ class PermissionSeeder extends Seeder
             // Fitur Lanjutan
             'adjustment-price', 'adjustment-stock',
 
-            // [BARU] Log Aktivitas
+            // Log Aktivitas
             'log-view', 'log-delete',
+
+            // [BARU] Retur
+            'return-delete',
         ];
 
-        // [MODIFIKASI V2.0.0] Gunakan firstOrCreate untuk mencegah eror duplikat
+        // Gunakan firstOrCreate untuk mencegah eror duplikat
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
@@ -57,16 +60,17 @@ class PermissionSeeder extends Seeder
         $adminRole->givePermissionTo(Permission::all());
 
         // Berikan permission spesifik ke Manager
-        $managerRole->givePermissionTo([
+        $managerRole->syncPermissions([ // Gunakan syncPermissions agar lebih bersih
             'product-view', 'product-create', 'product-edit', 'product-delete',
             'transaction-view', 'transaction-create', 'transaction-cancel',
             'finance-view', 'finance-manage-payment', 'finance-crud-expense',
             'report-view-all',
             'adjustment-price', 'adjustment-stock',
+            'return-delete', // [BARU] Tambahkan hak akses baru
         ]);
 
         // Berikan permission spesifik ke Staf
-        $stafRole->givePermissionTo([
+        $stafRole->syncPermissions([ // Gunakan syncPermissions agar lebih bersih
             'transaction-view', 'transaction-create', 'transaction-cancel',
         ]);
     }

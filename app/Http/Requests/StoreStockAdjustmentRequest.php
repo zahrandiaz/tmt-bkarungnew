@@ -13,7 +13,8 @@ class StoreStockAdjustmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Terapkan keamanan berlapis
+        return $this->user()->can('adjustment-stock');
     }
 
     /**
@@ -28,7 +29,7 @@ class StoreStockAdjustmentRequest extends FormRequest
             'type' => ['required', 'string', 'in:increment,decrement'],
             'quantity' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:255'],
-            'product_name_display' => ['sometimes', 'string'], // <-- TAMBAHKAN BARIS INI
+            'product_name_display' => ['sometimes', 'string'],
         ];
     }
 

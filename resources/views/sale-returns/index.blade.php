@@ -39,7 +39,7 @@
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Tanggal Retur</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Total</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Dicatat Oleh</th>
-                                    <th class="px-4 py-2"></th>
+                                    <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Aksi</th> {{-- [UBAH] --}}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -51,10 +51,21 @@
                                     <td class="whitespace-nowrap px-4 py-2 text-gray-700">{{ \Carbon\Carbon::parse($return->return_date)->format('d-m-Y H:i') }}</td>
                                     <td class="whitespace-nowrap px-4 py-2 text-gray-700">Rp {{ number_format($return->total_amount, 0, ',', '.') }}</td>
                                     <td class="whitespace-nowrap px-4 py-2 text-gray-700">{{ $return->user->name }}</td>
-                                    <td class="whitespace-nowrap px-4 py-2">
+                                    <td class="whitespace-nowrap px-4 py-2 flex items-center space-x-2"> {{-- [UBAH] --}}
                                         <a href="{{ route('sale-returns.show', $return->id) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">
                                             Detail
                                         </a>
+                                        {{-- [TAMBAHKAN BLOK INI] --}}
+                                        @can('return-delete')
+                                        <form action="{{ route('sale-returns.destroy', $return->id) }}" method="POST" onsubmit="return confirm('Anda yakin ingin membatalkan retur ini? Stok akan disesuaikan kembali.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">
+                                                Batalkan
+                                            </button>
+                                        </form>
+                                        @endcan
+                                        {{-- [AKHIR BLOK TAMBAHAN] --}}
                                     </td>
                                 </tr>
                                 @empty

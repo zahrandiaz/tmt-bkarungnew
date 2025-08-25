@@ -11,7 +11,8 @@ class UpdateBulkPriceRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true; 
+        // [UBAH] Terapkan keamanan berlapis
+        return $this->user()->can('adjustment-price');
     }
 
     /**
@@ -23,10 +24,7 @@ class UpdateBulkPriceRequest extends FormRequest
     {
         return [
             'products' => ['required', 'array'],
-            
-            // [FIX] Menggunakan nama tabel yang benar: 'karung_products'
             'products.*.id' => ['required', 'integer', 'exists:karung_products,id'], 
-            
             'products.*.selling_price' => ['required', 'numeric', 'min:0'],
         ];
     }
