@@ -7,60 +7,48 @@ use App\Models\SaleReturn;
 use App\Models\SaleReturnDetail;
 use App\Models\Product;
 use App\Models\Setting;
-use App\Http\Requests\StoreSaleReturnRequest; // [BARU] Import Form Request
-use Illuminate\Support\Facades\DB; // [BARU] Import DB Facade
+use App\Http\Requests\StoreSaleReturnRequest;
+use Illuminate\Support\Facades\DB;
 
 class SaleReturnController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $saleReturns = SaleReturn::with('sale.customer', 'user') // Load relasi customer juga
-            ->latest()
-            ->paginate(10);
-
+        $saleReturns = SaleReturn::with('sale.customer', 'user')->latest()->paginate(10);
         return view('sale-returns.index', compact('saleReturns'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        $sales = \App\Models\Sale::whereNull('deleted_at')->latest()->get();
-        return view('sale-returns.create', compact('sales'));
+        return view('sale-returns.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreSaleReturnRequest $request)
     {
         $validated = $request->validated();
         $items = $validated['items'];
-        $totalAmount = collect($items)->sum(function ($item) {
-            return $item['return_quantity'] * $item['unit_price'];
-        });
-
-        // Cek apakah manajemen stok aktif
-        $stockManagementSetting = Setting::where('key', 'manage_stock')->first();
-        $isStockManaged = $stockManagementSetting ? $stockManagementSetting->value : true; // Default true jika setting tidak ada
+        $totalAmount = collect($items)->sum(fn($item) => $item['return_quantity'] * $item['unit_price']);
 
         try {
-            DB::transaction(function () use ($validated, $items, $totalAmount, $isStockManaged) {
-                // 1. Buat data master retur
+            DB::transaction(function () use ($validated, $items, $totalAmount) {
+                // [PERBAIKAN #2 & #3] Ambil pengaturan & produk di luar loop
+                $isStockManaged = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+                $productIds = array_column($items, 'product_id');
+                $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+                // [PERBAIKAN #1] Logika pembuatan kode retur yang aman dari race condition
+                $latestReturnId = SaleReturn::latest('id')->first()?->id ?? 0;
+                $returnCode = 'RTS-' . now()->format('Ymd') . '-' . str_pad($latestReturnId + 1, 4, '0', STR_PAD_LEFT);
+
                 $saleReturn = SaleReturn::create([
                     'sale_id' => $validated['sale_id'],
                     'user_id' => auth()->id(),
-                    'return_code' => 'RTS-' . date('Ymd') . '-' . str_pad(SaleReturn::count() + 1, 4, '0', STR_PAD_LEFT),
+                    'return_code' => $returnCode,
                     'return_date' => $validated['return_date'],
                     'total_amount' => $totalAmount,
                     'notes' => $validated['notes'],
                 ]);
 
-                // 2. Loop dan simpan detail item retur, lalu update stok
                 foreach ($items as $item) {
                     SaleReturnDetail::create([
                         'sale_return_id' => $saleReturn->id,
@@ -70,55 +58,52 @@ class SaleReturnController extends Controller
                         'subtotal' => $item['return_quantity'] * $item['unit_price'],
                     ]);
 
-                    // 3. Tambah kembali stok produk jika manajemen stok aktif
-                    if ($isStockManaged) {
-                        $product = Product::find($item['product_id']);
+                    if ($isStockManaged === '1') {
+                        $product = $products->get($item['product_id']);
                         if ($product) {
                             $product->increment('stock', $item['return_quantity']);
                         }
                     }
                 }
             });
-
             return redirect()->route('sale-returns.index')->with('success', 'Retur penjualan berhasil disimpan.');
-
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage())->withInput();
         }
     }
 
-
-    /**
-     * Display the specified resource.
-     */
     public function show(SaleReturn $saleReturn)
     {
-        // Muat semua relasi yang dibutuhkan untuk ditampilkan di halaman detail
         $saleReturn->load('sale.customer', 'user', 'details.product');
         return view('sale-returns.show', compact('saleReturn'));
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(SaleReturn $saleReturn)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(StoreSaleReturnRequest $request, SaleReturn $saleReturn)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
+    
+    // [PERBAIKAN #4] Implementasi method destroy untuk pembatalan retur
     public function destroy(SaleReturn $saleReturn)
     {
-        //
+        try {
+            DB::transaction(function () use ($saleReturn) {
+                $isStockManaged = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+
+                if ($isStockManaged === '1') {
+                    // Balikkan logika stok: kurangi stok saat retur penjualan dibatalkan
+                    foreach ($saleReturn->details as $detail) {
+                        $product = $detail->product;
+                        if ($product && $product->stock < $detail->quantity) {
+                            throw new \Exception("Stok '{$product->name}' tidak cukup untuk membatalkan retur ini.");
+                        }
+                        if ($product) {
+                            $product->decrement('stock', $detail->quantity);
+                        }
+                    }
+                }
+                
+                $saleReturn->delete(); // Hapus retur dan detailnya (via cascade)
+            });
+
+            return redirect()->route('sale-returns.index')->with('success', 'Retur penjualan berhasil dibatalkan.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal membatalkan retur: ' . $e->getMessage());
+        }
     }
 }

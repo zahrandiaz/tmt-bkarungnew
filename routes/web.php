@@ -117,6 +117,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/sales/{sale}/details', [\App\Http\Controllers\SaleController::class, 'getSaleDetailsForReturn'])->name('api.sales.details')->middleware('can:transaction-create');
     Route::get('/api/purchases/{purchase}/details', [\App\Http\Controllers\PurchaseController::class, 'getPurchaseDetailsForReturn'])->name('api.purchases.details')->middleware('can:transaction-create');
     Route::get('/api/sales/search', [\App\Http\Controllers\SaleController::class, 'search'])->name('api.sales.search')->middleware('can:transaction-create');
+    
+    // [TAMBAHKAN BARIS DI BAWAH INI]
+    Route::get('/api/purchases/search', [\App\Http\Controllers\PurchaseController::class, 'search'])->name('api.purchases.search')->middleware('can:transaction-create');
 
     // Rute Cetak
     Route::get('sales/{id}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal')->middleware('can:transaction-view');

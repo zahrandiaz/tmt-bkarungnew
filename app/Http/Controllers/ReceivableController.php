@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Http\Requests\StoreReceivablePaymentRequest; // [UBAH]
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -11,67 +12,42 @@ use Illuminate\Support\Str;
 
 class ReceivableController extends Controller
 {
-    /**
-     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
-     */
     public function index(Request $request)
     {
         $status = $request->query('status', 'belum lunas'); 
         $search = $request->query('search');
-
         $query = Sale::query();
-
         if ($status == 'lunas') {
             $query->where('payment_status', 'Lunas');
         } else {
             $query->where('payment_status', 'Belum Lunas');
         }
-
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($subQuery) use ($search) {
-                      $subQuery->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('customer', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
-        
         $receivables = $query->with('customer')->latest()->paginate(10)->withQueryString();
-
         return view('receivables.index', compact('receivables', 'search'));
     }
 
-    /**
-     * Menampilkan halaman untuk mengelola pembayaran piutang.
-     */
     public function manage(Sale $sale)
     {
         $sale->load('customer', 'payments.user');
         return view('receivables.manage', compact('sale'));
     }
 
-    /**
-     * Menyimpan catatan pembayaran baru untuk piutang.
-     */
-    public function storePayment(Request $request, Sale $sale)
+    // [UBAH] Gunakan Form Request baru
+    public function storePayment(StoreReceivablePaymentRequest $request, Sale $sale)
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'payment_date' => 'required|date',
-            'payment_method' => 'required|string',
-            'notes' => 'nullable|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ]);
-
-        $remainingAmount = $sale->total_amount - $sale->total_paid;
-        if ($validated['amount'] > $remainingAmount + 0.001) {
-            return back()->with('error', 'Jumlah pembayaran melebihi sisa tagihan.');
-        }
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($validated, $sale, $request) {
                 $attachmentPath = null;
-
                 if ($request->hasFile('attachment')) {
                     $image = $request->file('attachment');
                     $fileName = time() . '_' . Str::random(10) . '.webp';
@@ -89,7 +65,11 @@ class ReceivableController extends Controller
                     'user_id' => $request->user()->id,
                 ]);
 
-                $sale->total_paid += $validated['amount'];
+                // Gunakan DB::raw untuk mencegah race condition
+                $sale->increment('total_paid', $validated['amount']);
+
+                // Refresh model untuk mendapatkan nilai total_paid yang terbaru
+                $sale->refresh();
 
                 if ($sale->total_paid >= $sale->total_amount - 0.001) {
                     $sale->payment_status = 'Lunas';
@@ -101,9 +81,7 @@ class ReceivableController extends Controller
             if($sale->payment_status == 'Lunas') {
                 return redirect()->route('receivables.index', ['status' => 'lunas'])->with('success', 'Pembayaran berhasil dicatat. Piutang telah lunas.');
             }
-
             return redirect()->route('receivables.manage', $sale)->with('success', 'Pembayaran berhasil dicatat.');
-
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }

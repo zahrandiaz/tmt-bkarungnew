@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Http\Requests\StoreExpenseRequest;
+use App\Http\Requests\UpdateExpenseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
@@ -11,46 +13,26 @@ use Illuminate\Support\Str;
 
 class ExpenseController extends Controller
 {
-    /**
-     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
-     */
     public function index(Request $request)
     {
         $search = $request->input('search');
-
         $expensesQuery = Expense::with('category');
-
         if ($search) {
             $expensesQuery->where('name', 'like', "%{$search}%");
         }
-
         $expenses = $expensesQuery->latest()->paginate(10)->appends(['search' => $search]);
-        
         return view('expenses.index', compact('expenses', 'search'));
     }
 
-    /**
-     * Menampilkan form untuk membuat biaya baru.
-     */
     public function create()
     {
         $categories = ExpenseCategory::orderBy('name')->get();
         return view('expenses.create', compact('categories'));
     }
 
-    /**
-     * Menyimpan biaya baru ke database.
-     */
-    public function store(Request $request)
+    public function store(StoreExpenseRequest $request)
     {
-        $validated = $request->validate([
-            'expense_category_id' => 'required|exists:expense_categories,id',
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
-            'expense_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ]);
+        $validated = $request->validated();
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
@@ -74,28 +56,15 @@ class ExpenseController extends Controller
         return redirect()->route('expenses.index')->with('success', 'Catatan biaya berhasil ditambahkan.');
     }
 
-    /**
-     * Menampilkan form untuk mengedit biaya.
-     */
     public function edit(Expense $expense)
     {
         $categories = ExpenseCategory::orderBy('name')->get();
         return view('expenses.edit', compact('expense', 'categories'));
     }
 
-    /**
-     * Memperbarui biaya di database.
-     */
-    public function update(Request $request, Expense $expense)
+    public function update(UpdateExpenseRequest $request, Expense $expense)
     {
-        $validated = $request->validate([
-            'expense_category_id' => 'required|exists:expense_categories,id',
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
-            'expense_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ]);
+        $validated = $request->validated();
 
         $attachmentPath = $expense->attachment_path;
         if ($request->hasFile('attachment')) {
@@ -105,7 +74,10 @@ class ExpenseController extends Controller
             $image = $request->file('attachment');
             $fileName = time() . '_' . Str::random(10) . '.webp';
             $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
+            
+            // [PERBAIKAN] Menghapus satu tanda kutip ' yang berlebih
             Storage::disk('public')->put('expense_attachments/' . $fileName, (string) $imageCompressed);
+            
             $attachmentPath = 'expense_attachments/' . $fileName;
         }
 
@@ -121,9 +93,6 @@ class ExpenseController extends Controller
         return redirect()->route('expenses.index')->with('success', 'Catatan biaya berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus biaya dari database.
-     */
     public function destroy(Expense $expense)
     {
         if ($expense->attachment_path) {
