@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule; // <-- [BARU] Tambahkan ini
+use Illuminate\Validation\Rule;
 
 class UpdateCustomerRequest extends FormRequest
 {
@@ -12,7 +12,8 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Menggunakan hak akses yang sama dengan rute master data
+        return $this->user()->can('product-view');
     }
 
     /**
@@ -22,12 +23,12 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        // [BARU] Dapatkan ID pelanggan dari rute
+        // Dapatkan ID pelanggan dari rute
         $customerId = $this->route('customer')->id;
 
         return [
             'name' => 'required|string|max:255',
-            // [MODIFIKASI] Gunakan Rule::unique untuk mengabaikan ID pelanggan saat ini
+            // Gunakan Rule::unique untuk mengabaikan ID pelanggan saat ini
             'phone' => ['required', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)],
             'address' => 'nullable|string',
         ];

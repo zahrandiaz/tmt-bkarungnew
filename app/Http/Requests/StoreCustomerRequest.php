@@ -11,9 +11,8 @@ class StoreCustomerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Otorisasi sudah ditangani oleh middleware 'role:Admin' pada rute,
-        // jadi kita bisa langsung mengizinkannya di sini.
-        return true;
+        // [UBAH] Menggunakan hak akses yang sama dengan rute master data
+        return $this->user()->can('product-view');
     }
 
     /**

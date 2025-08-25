@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+// [HAPUS] Request tidak digunakan lagi secara langsung
+// use Illuminate\Http\Request; 
+use App\Http\Requests\UpdatePermissionRequest; // [TAMBAH] Impor class baru
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\DB;
@@ -28,12 +30,11 @@ class PermissionController extends Controller
     /**
      * Memperbarui hak akses untuk semua peran.
      */
-    public function update(Request $request)
+    // [UBAH] Ganti tipe request dari Request menjadi UpdatePermissionRequest
+    public function update(UpdatePermissionRequest $request)
     {
-        $validated = $request->validate([
-            'permissions' => 'required|array',
-            'permissions.*' => 'nullable|array', // Memastikan setiap role memiliki array permission
-        ]);
+        // [UBAH] Ambil data yang sudah tervalidasi dari method validated()
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($validated) {

@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule; // <-- [BARU] Tambahkan ini
+use Illuminate\Validation\Rule;
 
 class UpdateSupplierRequest extends FormRequest
 {
@@ -12,7 +12,8 @@ class UpdateSupplierRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Menggunakan hak akses yang sama dengan rute master data
+        return $this->user()->can('product-view');
     }
 
     /**
@@ -22,12 +23,12 @@ class UpdateSupplierRequest extends FormRequest
      */
     public function rules(): array
     {
-        // [BARU] Dapatkan ID supplier dari rute
+        // Dapatkan ID supplier dari rute
         $supplierId = $this->route('supplier')->id;
 
         return [
             'name' => 'required|string|max:255',
-            // [MODIFIKASI] Gunakan Rule::unique untuk mengabaikan ID supplier saat ini
+            // Gunakan Rule::unique untuk mengabaikan ID supplier saat ini
             'phone' => ['required', 'string', 'max:20', Rule::unique('suppliers')->ignore($supplierId)],
             'address' => 'nullable|string',
         ];
