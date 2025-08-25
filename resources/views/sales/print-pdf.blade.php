@@ -21,18 +21,19 @@
         .total-section table { width: 100%; }
         .total-section td { padding: 5px; }
         .clearfix::after { content: ""; clear: both; display: table; }
-        /* [BARU] Styling untuk status */
         .status { font-size: 14px; font-weight: bold; }
         .status-selesai { color: green; }
         .status-dibatalkan { color: red; }
+        .footer-notes { text-align: center; margin-top: 40px; font-size: 10px; color: #777; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            {{-- [DIPERBARUI] Data dinamis dari settings --}}
             <h1>INVOICE</h1>
-            <p><strong>TMT Bagja Karung</strong></p>
-            <p>Jl. Contoh No. 123, Kota Anda</p>
+            <p><strong>{{ $settings['store_name'] ?? 'Nama Toko' }}</strong></p>
+            <p>{{ $settings['store_address'] ?? 'Alamat Toko' }}</p>
         </div>
         <hr>
         <div class="details-section clearfix">
@@ -44,7 +45,6 @@
             <div class="invoice-details">
                 <p><strong>No. Invoice:</strong> {{ $sale->invoice_number }}</p>
                 <p><strong>Tanggal:</strong> {{ \Carbon\Carbon::parse($sale->sale_date)->isoFormat('D MMMM YYYY') }}</p>
-                {{-- [BARU] Tambahkan Status Transaksi --}}
                 <p class="status {{ $sale->trashed() ? 'status-dibatalkan' : 'status-selesai' }}">
                     <strong>Status:</strong> {{ $sale->trashed() ? 'DIBATALKAN' : 'SELESAI' }}
                 </p>
@@ -83,6 +83,11 @@
                     <td class="text-right"><strong>Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</strong></td>
                 </tr>
             </table>
+        </div>
+        
+        {{-- [BARU] Catatan kaki dinamis --}}
+        <div class="footer-notes">
+            <p>{{ $settings['invoice_footer_notes'] ?? 'Terima kasih!' }}</p>
         </div>
     </div>
 </body>

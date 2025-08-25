@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Setting; // [BARU] Import model Setting
-use Illuminate\Support\Facades\Redirect; // [BARU] Import Redirect
+use App\Models\Setting;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Cache; // [BARU] Import Cache facade
 
 class SettingsController extends Controller
 {
@@ -13,9 +14,7 @@ class SettingsController extends Controller
      */
     public function index()
     {
-        // Mengambil semua pengaturan dari database dan mengubahnya menjadi format key => value
         $settings = Setting::all()->pluck('value', 'key');
-        
         return view('settings.index', compact('settings'));
     }
 
@@ -24,17 +23,26 @@ class SettingsController extends Controller
      */
     public function update(Request $request)
     {
-        // Validasi sederhana, bisa disesuaikan jika ada pengaturan lain
         $request->validate([
+            'store_name' => 'required|string|max:255',
+            'store_address' => 'required|string|max:500',
+            'store_phone' => 'required|string|max:20',
+            'invoice_footer_notes' => 'required|string|max:500',
             'enable_automatic_stock' => 'nullable|string',
         ]);
 
-        // Menggunakan updateOrCreate untuk membuat atau memperbarui pengaturan stok
-        Setting::updateOrCreate(
-            ['key' => 'enable_automatic_stock'],
-            // Jika checkbox dicentang, value akan '1', jika tidak, value akan '0'
-            ['value' => $request->has('enable_automatic_stock') ? '1' : '0']
-        );
+        $inputs = $request->except('_token');
+        $inputs['enable_automatic_stock'] = $request->has('enable_automatic_stock') ? '1' : '0';
+
+        foreach ($inputs as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => $value]
+            );
+        }
+
+        // [PERBAIKAN BUG] Hapus cache pengaturan agar perubahan langsung terlihat.
+        Cache::forget('app_settings');
 
         return Redirect::route('settings.index')->with('status', 'pengaturan-berhasil-disimpan');
     }

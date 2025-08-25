@@ -5,16 +5,18 @@
     <title>Laporan Laba Rugi</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; font-size: 12px; }
-        .header { text-align: center; margin-bottom: 25px; }
-        .header h1 { margin: 0; }
-        .header p { margin: 5px 0; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 16px; }
+        .header h2 { margin: 0; font-size: 14px; font-weight: normal; }
+        .header p { margin: 2px 0; font-size: 10px; }
+        .report-info { font-size: 12px; margin-bottom: 15px; }
         .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .summary-table td { padding: 8px; border-bottom: 1px solid #ddd; }
         .summary-table .label { width: 70%; }
         .summary-table .amount { text-align: right; font-weight: bold; }
         .summary-table .total { font-size: 1.1em; border-top: 2px solid #000; }
         .expenses-table { width: 100%; border-collapse: collapse; }
-        .expenses-table th, .expenses-table td { border: 1px solid #000; padding: 6px; text-align: left; }
+        .expenses-table th, .expenses-table td { border: 1px solid #000; padding: 6px; text-align: left; font-size: 10px; }
         .expenses-table th { background-color: #f2f2f2; }
         .expenses-table .amount { text-align: right; }
         .section-title { font-size: 1.2em; font-weight: bold; margin-top: 20px; margin-bottom: 10px; }
@@ -23,9 +25,16 @@
 <body>
 
     <div class="header">
-        <h1>Laporan Laba Rugi</h1>
-        <p>Periode: {{ \Carbon\Carbon::parse($startDate)->isoFormat('D MMMM YYYY') }} - {{ \Carbon\Carbon::parse($endDate)->isoFormat('D MMMM YYYY') }}</p>
-        <p>Dicetak pada: {{ \Carbon\Carbon::now()->isoFormat('D MMMM YYYY, HH:mm') }}</p>
+        <h1>{{ $settings['store_name'] ?? 'Nama Toko' }}</h1>
+        <p>{{ $settings['store_address'] ?? 'Alamat Toko' }}</p>
+        <p>Telepon: {{ $settings['store_phone'] ?? 'Nomor Telepon' }}</p>
+        <hr>
+        <h2>Laporan Laba Rugi</h2>
+    </div>
+
+     <div class="report-info">
+        Periode: {{ \Carbon\Carbon::parse($startDate)->isoFormat('D MMMM YYYY') }} - {{ \Carbon\Carbon::parse($endDate)->isoFormat('D MMMM YYYY') }} <br>
+        Dicetak pada: {{ \Carbon\Carbon::now()->isoFormat('D MMMM YYYY, HH:mm') }}
     </div>
 
     <table class="summary-table">

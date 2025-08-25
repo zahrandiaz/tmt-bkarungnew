@@ -20,15 +20,52 @@
                     <form method="POST" action="{{ route('settings.update') }}">
                         @csrf
                         
-                        <div class="space-y-6">
+                        <div class="space-y-8">
+                            <!-- [BARU] Bagian Pengaturan Umum Toko -->
                             <div>
+                                <h3 class="text-lg font-medium text-gray-900">Pengaturan Umum Toko</h3>
+                                <p class="mt-1 text-sm text-gray-600">
+                                    Informasi ini akan ditampilkan pada semua dokumen cetak seperti invoice dan laporan.
+                                </p>
+                                <div class="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                                    <!-- Nama Toko -->
+                                    <div class="sm:col-span-4">
+                                        <label for="store_name" class="block text-sm font-medium text-gray-700">Nama Toko</label>
+                                        <input type="text" name="store_name" id="store_name" value="{{ $settings['store_name'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <x-input-error :messages="$errors->get('store_name')" class="mt-2" />
+                                    </div>
+
+                                    <!-- Nomor Telepon -->
+                                    <div class="sm:col-span-2">
+                                        <label for="store_phone" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
+                                        <input type="text" name="store_phone" id="store_phone" value="{{ $settings['store_phone'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <x-input-error :messages="$errors->get('store_phone')" class="mt-2" />
+                                    </div>
+
+                                    <!-- Alamat Toko -->
+                                    <div class="sm:col-span-6">
+                                        <label for="store_address" class="block text-sm font-medium text-gray-700">Alamat Toko</label>
+                                        <textarea id="store_address" name="store_address" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ $settings['store_address'] ?? '' }}</textarea>
+                                        <x-input-error :messages="$errors->get('store_address')" class="mt-2" />
+                                    </div>
+
+                                    <!-- Catatan Kaki Nota -->
+                                    <div class="sm:col-span-6">
+                                        <label for="invoice_footer_notes" class="block text-sm font-medium text-gray-700">Catatan Kaki Nota/Invoice</label>
+                                        <textarea id="invoice_footer_notes" name="invoice_footer_notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ $settings['invoice_footer_notes'] ?? '' }}</textarea>
+                                        <x-input-error :messages="$errors->get('invoice_footer_notes')" class="mt-2" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bagian Manajemen Stok -->
+                            <div class="border-t border-gray-200 pt-8">
                                 <h3 class="text-lg font-medium text-gray-900">Manajemen Stok</h3>
-                                <div class="mt-4 border-t border-gray-200 pt-4">
+                                <div class="mt-4">
                                     <div class="relative flex items-start">
                                         <div class="flex h-6 items-center">
                                             <input id="enable_automatic_stock" name="enable_automatic_stock" type="checkbox" value="1" 
                                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                                                   {{-- Cek apakah pengaturan ada dan nilainya '1' --}}
                                                    @if(isset($settings['enable_automatic_stock']) && $settings['enable_automatic_stock'] == '1') checked @endif>
                                         </div>
                                         <div class="ml-3 text-sm leading-6">
