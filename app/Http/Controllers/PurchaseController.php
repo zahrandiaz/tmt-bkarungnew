@@ -12,26 +12,20 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 use App\Models\Setting;
-use App\Models\Payment; // [BARU] Tambahkan model Payment
+use App\Models\Payment;
 
 class PurchaseController extends Controller
 {
-    /**
-     * [MODIFIKASI] Eager load relasi 'returns'.
-     */
     public function index(Request $request)
     {
         $status = $request->query('status');
         $search = $request->query('search');
-
         $query = Purchase::query();
-
         if ($status == 'dibatalkan') {
             $query->onlyTrashed();
         } elseif ($status == 'semua') {
             $query->withTrashed();
         }
-
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('purchase_code', 'like', "%{$search}%")
@@ -40,10 +34,7 @@ class PurchaseController extends Controller
                     });
             });
         }
-        
-        // [PERBAIKAN] Tambahkan 'returns' ke dalam with()
         $purchases = $query->with('supplier', 'returns')->latest()->paginate(10)->appends($request->query());
-        
         return view('purchases.index', compact('purchases', 'search'));
     }
 
@@ -95,7 +86,6 @@ class PurchaseController extends Controller
                     'total_paid' => $totalPaid,
                 ]);
 
-                // [PERBAIKAN BUG] Buat entri pembayaran awal jika ada DP atau Lunas
                 if ($totalPaid > 0) {
                     $purchase->payments()->create([
                         'amount' => $totalPaid,
@@ -108,70 +98,98 @@ class PurchaseController extends Controller
 
                 $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
 
+                // Ambil semua produk dalam satu query untuk efisiensi
+                $productIds = array_column($validatedData['items'], 'product_id');
+                $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
                 foreach ($validatedData['items'] as $item) {
                     $purchase->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'purchase_price' => $item['purchase_price'],
                     ]);
-
-                    $product = Product::find($item['product_id']);
-                    if ($product) {
-                        if ($isStockEnabled === '1') {
+                    
+                    if ($isStockEnabled === '1') {
+                        $product = $products->get($item['product_id']);
+                        if ($product) {
                             $product->increment('stock', $item['quantity']);
                         }
                     }
                 }
             });
-
             return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', 'Transaksi pembelian berhasil disimpan.');
-
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage())->withInput();
         }
     }
-
-    /**
-     * [MODIFIKASI] Eager load relasi 'returns'.
-     */
+    
     public function show($id)
     {
-        // [PERBAIKAN] Tambahkan 'returns' dan 'returns.details' ke dalam with()
         $purchase = Purchase::withTrashed()->with(['supplier', 'user', 'details.product', 'returns', 'returns.details.product'])->findOrFail($id);
         return view('purchases.show', compact('purchase'));
     }
     
     public function cancel(Purchase $purchase)
     {
-        $purchase->delete();
-        return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dibatalkan.");
+        try {
+            DB::transaction(function () use ($purchase) {
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+
+                if ($isStockEnabled === '1') {
+                    // Tahap 1: Validasi apakah stok cukup untuk dikurangi
+                    foreach ($purchase->details as $detail) {
+                        if ($detail->product && $detail->product->stock < $detail->quantity) {
+                            throw new \Exception("Stok '{$detail->product->name}' tidak cukup untuk membatalkan transaksi ini.");
+                        }
+                    }
+                    // Tahap 2: Lakukan pengurangan stok
+                    foreach ($purchase->details as $detail) {
+                        if ($detail->product) {
+                            $detail->product->decrement('stock', $detail->quantity);
+                        }
+                    }
+                }
+                $purchase->delete(); // Lakukan soft delete
+            });
+
+            return redirect()->route('purchases.index', ['status' => 'selesai'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dibatalkan.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal membatalkan transaksi: ' . $e->getMessage());
+        }
     }
 
     public function restore($id)
     {
         $purchase = Purchase::onlyTrashed()->with('details.product')->findOrFail($id);
         
-        $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
-        if ($isStockEnabled === '1') {
-            foreach ($purchase->details as $detail) {
-                if ($detail->product) {
-                    $detail->product->decrement('stock', $detail->quantity);
+        try {
+            DB::transaction(function() use ($purchase) {
+                $isStockEnabled = Setting::where('key', 'enable_automatic_stock')->first()->value ?? '0';
+                
+                if ($isStockEnabled === '1') {
+                    foreach ($purchase->details as $detail) {
+                        if ($detail->product) {
+                            $detail->product->increment('stock', $detail->quantity);
+                        }
+                    }
                 }
-            }
+                $purchase->restore();
+            });
+
+            return redirect()->route('purchases.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dipulihkan.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memulihkan transaksi: ' . $e->getMessage());
         }
-        
-        $purchase->restore();
-        return redirect()->route('purchases.index', ['status' => 'dibatalkan'])->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dipulihkan.");
     }
     
     public function destroy($id)
     {
         $purchase = Purchase::withTrashed()->findOrFail($id);
-        
         if ($purchase->invoice_image_path) {
             Storage::disk('public')->delete($purchase->invoice_image_path);
         }
-        
         $purchase->forceDelete();
         return redirect()->route('purchases.index')->with('success', "Transaksi dengan kode {$purchase->purchase_code} berhasil dihapus permanen.");
     }
@@ -179,23 +197,19 @@ class PurchaseController extends Controller
     public function getPurchaseDetailsForReturn(Purchase $purchase)
     {
         $purchase->load('supplier', 'details.product');
-
         $purchase->details->each(function ($detail) use ($purchase) {
             $totalReturned = PurchaseReturnDetail::join('purchase_returns', 'purchase_return_details.purchase_return_id', '=', 'purchase_returns.id')
                 ->where('purchase_returns.purchase_id', $purchase->id)
                 ->where('purchase_return_details.product_id', $detail->product_id)
                 ->sum('purchase_return_details.quantity');
-                
             $detail->returnable_quantity = $detail->quantity - $totalReturned;
         });
-
         return response()->json($purchase);
     }
     
     public function search(Request $request)
     {
         $query = $request->input('q');
-
         $purchases = Purchase::with('supplier')
             ->where('purchase_code', 'like', "%{$query}%")
             ->orWhereHas('supplier', function ($q) use ($query) {
@@ -204,7 +218,6 @@ class PurchaseController extends Controller
             ->whereNull('deleted_at')
             ->limit(10)
             ->get();
-
         return response()->json($purchases->map(function ($purchase) {
             return [
                 'id' => $purchase->id,

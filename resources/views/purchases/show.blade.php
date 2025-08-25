@@ -10,6 +10,19 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
 
+                    {{-- [TAMBAHKAN BLOK INI] --}}
+                    @if (session('success'))
+                        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md" role="alert">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if (session('error'))
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+                    {{-- [AKHIR BLOK TAMBAHAN] --}}
+
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                         <a href="{{ url()->previous() }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300 mb-3 md:mb-0">
                             &larr; Kembali
@@ -35,6 +48,7 @@
                         </div>
                     </div>
 
+                    {{-- Sisa dari file ini sama persis seperti sebelumnya --}}
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Kode Pembelian</h3>

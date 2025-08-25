@@ -9,11 +9,33 @@ use Illuminate\Validation\Rule;
 class StoreSaleRequest extends FormRequest
 {
     /**
+     * @var \Illuminate\Database\Eloquent\Collection
+     */
+    protected $productsInCart;
+
+    /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Menerapkan keamanan berlapis sesuai standar audit kita
+        return $this->user()->can('transaction-create');
+    }
+
+    /**
+     * Mengambil semua produk yang ada di keranjang dalam satu query untuk efisiensi.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected function getProductsInCart()
+    {
+        if ($this->productsInCart) {
+            return $this->productsInCart;
+        }
+
+        $productIds = collect($this->input('items', []))->pluck('product_id')->filter();
+
+        return $this->productsInCart = Product::whereIn('id', $productIds)->get()->keyBy('id');
     }
 
     /**
@@ -24,33 +46,30 @@ class StoreSaleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Validasi untuk data utama (header)
             'customer_id' => ['required', Rule::exists('customers', 'id')],
             'sale_date' => 'required|date_format:Y-m-d\TH:i',
             'total_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
-
-            // [BARU] Validasi untuk detail pembayaran
             'payment_method' => ['required', Rule::in(['tunai', 'transfer', 'lainnya'])],
             'payment_status' => ['required', Rule::in(['lunas', 'belum lunas'])],
-            'down_payment' => ['nullable', 'numeric', 'min:0', 'required_if:payment_status,belum lunas'],
+            // [TAMBAH] Validasi agar DP tidak melebihi total
+            'down_payment' => ['nullable', 'numeric', 'min:0', 'required_if:payment_status,belum lunas', 'lte:total_amount'],
 
-            // Validasi untuk detail item (array)
             'items' => 'required|array|min:1',
             'items.*.product_id' => ['required', Rule::exists('karung_products', 'id')],
             'items.*.quantity' => [
                 'required',
                 'integer',
                 'min:1',
+                // [OPTIMALISASI] Validasi stok kini menggunakan data yang sudah di-cache (pre-fetched)
                 function ($attribute, $value, $fail) {
                     $index = explode('.', $attribute)[1];
                     $productId = $this->input('items.' . $index . '.product_id');
 
-                    if ($productId) {
-                        $product = Product::find($productId);
-                        if ($product && $product->stock < $value) {
-                            $fail("Stok untuk produk '{$product->name}' tidak mencukupi (sisa: {$product->stock}).");
-                        }
+                    $product = $this->getProductsInCart()->get($productId);
+
+                    if ($product && $product->stock < $value) {
+                        $fail("Stok untuk produk '{$product->name}' tidak mencukupi (sisa: {$product->stock}).");
                     }
                 },
             ],
