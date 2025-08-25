@@ -12,7 +12,8 @@ class UpdateUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Izinkan request hanya jika pengguna memiliki hak akses 'user-edit'.
+        return $this->user()->can('user-edit');
     }
 
     /**

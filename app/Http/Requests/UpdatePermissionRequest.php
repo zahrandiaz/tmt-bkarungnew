@@ -4,15 +4,15 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreSupplierRequest extends FormRequest
+class UpdatePermissionRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        // [UBAH] Menggunakan hak akses yang sama dengan rute master data
-        return $this->user()->can('product-view');
+        // Izinkan request jika pengguna memiliki hak akses 'role-edit'
+        return $this->user()->can('role-edit');
     }
 
     /**
@@ -23,10 +23,8 @@ class StoreSupplierRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            // Memastikan nomor telepon unik di tabel 'suppliers'
-            'phone' => 'required|string|max:20|unique:suppliers,phone',
-            'address' => 'nullable|string',
+            'permissions' => 'required|array',
+            'permissions.*' => 'nullable|array', // Memastikan setiap role memiliki array permission
         ];
     }
 }

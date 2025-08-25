@@ -8,7 +8,8 @@ class UpdateProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Izinkan request hanya jika pengguna memiliki hak akses 'product-edit'.
+        return $this->user()->can('product-edit');
     }
 
     public function rules(): array

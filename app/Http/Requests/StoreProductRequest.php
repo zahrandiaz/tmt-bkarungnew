@@ -8,7 +8,8 @@ class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        // [UBAH] Izinkan request hanya jika pengguna memiliki hak akses 'product-create'.
+        return $this->user()->can('product-create');
     }
 
     public function rules(): array
