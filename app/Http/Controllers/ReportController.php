@@ -16,7 +16,7 @@ use App\Exports\PurchasesExport;
 use App\Exports\StockExport;
 use App\Exports\DepositsExport;
 use App\Exports\ProfitAndLossExport;
-use App\Exports\CashFlowExport; // [BARU]
+use App\Exports\CashFlowExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -50,7 +50,6 @@ class ReportController extends Controller
         return [Carbon::today(), Carbon::today()];
     }
 
-    // ... (metode salesReport, purchasesReport, stockReport, profitAndLossReport, depositReport tetap sama) ...
     public function salesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
@@ -132,9 +131,22 @@ class ReportController extends Controller
         ]);
     }
 
-    public function stockReport()
+    // [DIPERBARUI] Tambahkan Request dan logika pencarian
+    public function stockReport(Request $request)
     {
-        $products = Product::with(['category', 'type'])->orderBy('name', 'asc')->paginate(15);
+        $productsQuery = Product::with(['category', 'type']);
+
+        // Logika pencarian
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $productsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $productsQuery->orderBy('name', 'asc')->paginate(15)->appends($request->query());
+        
         return view('reports.stock', ['products' => $products]);
     }
 
@@ -224,22 +236,18 @@ class ReportController extends Controller
         ]);
     }
 
-    // [REFAKTOR] Pindahkan logika ke private method agar bisa dipakai ulang
     private function getCashFlowData(Carbon $startDate, Carbon $endDate): array
     {
         $startOfDay = $startDate->copy()->startOfDay();
         $endOfDay = $endDate->copy()->endOfDay();
 
-        // Data Arus Kas
         $cashInflowsQuery = Payment::query()->where('payable_type', Sale::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
         $purchaseOutflowsQuery = Payment::query()->where('payable_type', Purchase::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
         $expenseOutflowsQuery = Expense::query()->whereBetween('expense_date', [$startOfDay, $endOfDay]);
 
-        // Data Piutang & Utang
         $receivablesQuery = Sale::query()->where('payment_status', 'Belum Lunas')->whereBetween('sale_date', [$startOfDay, $endOfDay]);
         $payablesQuery = Purchase::query()->where('payment_status', 'Belum Lunas')->whereBetween('purchase_date', [$startOfDay, $endOfDay]);
 
-        // Kalkulasi Total
         $totalInflow = (clone $cashInflowsQuery)->sum('amount');
         $totalPurchaseOutflow = (clone $purchaseOutflowsQuery)->sum('amount');
         $totalExpenseOutflow = (clone $expenseOutflowsQuery)->sum('amount');
@@ -268,7 +276,6 @@ class ReportController extends Controller
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        // [BARU] Cek jika ada permintaan ekspor
         if ($request->has('export')) {
             if ($request->input('export') === 'csv') {
                 return $this->exportCashFlowCsv($startDate, $endDate);
@@ -284,7 +291,6 @@ class ReportController extends Controller
         return view('reports.cash_flow', $data);
     }
 
-    // [BARU] Method Ekspor Arus Kas (CSV)
     private function exportCashFlowCsv(Carbon $startDate, Carbon $endDate)
     {
         $data = $this->getCashFlowData($startDate, $endDate);
@@ -292,7 +298,6 @@ class ReportController extends Controller
         return Excel::download(new CashFlowExport($data), $fileName);
     }
 
-    // [BARU] Method Ekspor Arus Kas (PDF)
     private function exportCashFlowPdf(Carbon $startDate, Carbon $endDate)
     {
         $data = $this->getCashFlowData($startDate, $endDate);
@@ -301,7 +306,6 @@ class ReportController extends Controller
         return $pdf->stream($fileName);
     }
     
-    // ... (sisa metode getSaleDetails, getPurchaseDetails, dan metode ekspor lainnya tetap sama) ...
     public function getSaleDetails($id)
     {
         $sale = Sale::withTrashed()->with('details.product')->find($id);
@@ -407,10 +411,11 @@ class ReportController extends Controller
         return $pdf->stream($fileName);
     }
 
-    public function exportStock()
+    public function exportStock(Request $request) // [DIPERBARUI] Terima Request
     {
+        $search = $request->input('search'); // [BARU] Ambil nilai pencarian
         $fileName = 'laporan-stok-' . Carbon::now()->format('Y-m-d') . '.csv';
-        return Excel::download(new StockExport(), $fileName);
+        return Excel::download(new StockExport($search), $fileName); // [DIPERBARUI] Kirim nilai search ke Export
     }
 
     public function exportDepositsCsv(Request $request)

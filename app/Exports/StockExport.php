@@ -10,11 +10,36 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 class StockExport implements FromQuery, WithHeadings, WithMapping
 {
     /**
-    * @return \Illuminate\Database\Query\Builder
-    */
+     * [BARU] Properti untuk menyimpan kata kunci pencarian.
+     * @var string|null
+     */
+    protected $search;
+
+    /**
+     * [BARU] Constructor untuk menerima kata kunci pencarian.
+     * @param string|null $search
+     */
+    public function __construct($search = null)
+    {
+        $this->search = $search;
+    }
+
+    /**
+     * [DIPERBARUI] Menerapkan filter pencarian pada query.
+     * @return \Illuminate\Database\Query\Builder
+     */
     public function query()
     {
-        return Product::query()->with(['category', 'type'])->orderBy('name', 'asc');
+        $query = Product::query()->with(['category', 'type']);
+
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                  ->orWhere('sku', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        return $query->orderBy('name', 'asc');
     }
 
     /**

@@ -22,9 +22,10 @@
 <body onload="window.print()">
     <div class="receipt">
         <div class="header">
-            <h1>TMT Bagja Karung</h1>
-            <p>Jl. Contoh No. 123, Kota Anda</p>
-            <p>Telp: 0812-3456-7890</p>
+            {{-- [DIPERBARUI] Data dinamis dari settings --}}
+            <h1>{{ $settings['store_name'] ?? 'Nama Toko' }}</h1>
+            <p>{{ $settings['store_address'] ?? 'Alamat Toko' }}</p>
+            <p>Telp: {{ $settings['store_phone'] ?? 'Nomor Telepon' }}</p>
         </div>
         <hr>
         <div class="details">
@@ -74,7 +75,8 @@
         </div>
         <hr>
         <div class="footer">
-            <p>Terima kasih telah berbelanja!</p>
+            {{-- [DIPERBARUI] Data dinamis dari settings --}}
+            <p>{{ $settings['invoice_footer_notes'] ?? 'Terima kasih!' }}</p>
         </div>
     </div>
 </body>
