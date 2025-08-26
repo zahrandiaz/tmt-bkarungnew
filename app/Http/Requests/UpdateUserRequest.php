@@ -36,7 +36,7 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users')->ignore($user->id),
             ],
             // Pastikan peran yang dikirim ada di tabel 'roles' kolom 'name'
-            'role' => ['required', 'string', Rule::exists('roles', 'name')],
+            'role' => ['required', 'integer', Rule::exists('roles', 'id')],
         ];
     }
 }
