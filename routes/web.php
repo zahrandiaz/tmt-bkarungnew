@@ -74,6 +74,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/purchases/export-csv', [ReportController::class, 'exportPurchasesCsv'])->name('reports.purchases.export.csv')->middleware('can:report-view-all');
     Route::get('reports/purchases/export-pdf', [ReportController::class, 'exportPurchasesPdf'])->name('reports.purchases.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/stock/export', [ReportController::class, 'exportStock'])->name('reports.stock.export')->middleware('can:report-view-all');
+    
+    // [TAMBAHKAN BARIS INI]
+    Route::get('reports/stock/export-pdf', [ReportController::class, 'exportStockPdf'])->name('reports.stock.export.pdf')->middleware('can:report-view-all');
+
     Route::get('reports/deposits/export-csv', [ReportController::class, 'exportDepositsCsv'])->name('reports.deposits.export.csv')->middleware('can:report-view-all');
     Route::get('reports/deposits/export-pdf', [ReportController::class, 'exportDepositsPdf'])->name('reports.deposits.export.pdf')->middleware('can:report-view-all');
     Route::get('reports/profit-loss/export-csv', [ReportController::class, 'exportProfitAndLossCsv'])->name('reports.profit-loss.export.csv')->middleware('can:report-view-all');
@@ -117,8 +121,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/sales/{sale}/details', [\App\Http\Controllers\SaleController::class, 'getSaleDetailsForReturn'])->name('api.sales.details')->middleware('can:transaction-create');
     Route::get('/api/purchases/{purchase}/details', [\App\Http\Controllers\PurchaseController::class, 'getPurchaseDetailsForReturn'])->name('api.purchases.details')->middleware('can:transaction-create');
     Route::get('/api/sales/search', [\App\Http\Controllers\SaleController::class, 'search'])->name('api.sales.search')->middleware('can:transaction-create');
-    
-    // [TAMBAHKAN BARIS DI BAWAH INI]
     Route::get('/api/purchases/search', [\App\Http\Controllers\PurchaseController::class, 'search'])->name('api.purchases.search')->middleware('can:transaction-create');
 
     // Rute Cetak

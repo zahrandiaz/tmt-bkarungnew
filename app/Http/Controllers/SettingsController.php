@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\UpdateSettingsRequest; // [UBAH]
 use App\Models\Setting;
+use Illuminate\Http\Request; // Hapus jika tidak ada method lain yg butuh
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Cache; // [BARU] Import Cache facade
+use Illuminate\Support\Facades\Cache;
 
 class SettingsController extends Controller
 {
@@ -21,29 +22,26 @@ class SettingsController extends Controller
     /**
      * Memperbarui pengaturan di database.
      */
-    public function update(Request $request)
+    // [UBAH] Gunakan UpdateSettingsRequest
+    public function update(UpdateSettingsRequest $request)
     {
-        $request->validate([
-            'store_name' => 'required|string|max:255',
-            'store_address' => 'required|string|max:500',
-            'store_phone' => 'required|string|max:20',
-            'invoice_footer_notes' => 'required|string|max:500',
-            'enable_automatic_stock' => 'nullable|string',
-        ]);
+        // Validasi sudah terjadi secara otomatis
+        $validated = $request->validated();
+        
+        // Tambahkan kembali nilai checkbox jika tidak ada
+        $validated['enable_automatic_stock'] = $request->has('enable_automatic_stock') ? '1' : '0';
 
-        $inputs = $request->except('_token');
-        $inputs['enable_automatic_stock'] = $request->has('enable_automatic_stock') ? '1' : '0';
-
-        foreach ($inputs as $key => $value) {
+        foreach ($validated as $key => $value) {
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => $value]
             );
         }
 
-        // [PERBAIKAN BUG] Hapus cache pengaturan agar perubahan langsung terlihat.
+        // Hapus cache pengaturan agar perubahan langsung terlihat.
         Cache::forget('app_settings');
 
-        return Redirect::route('settings.index')->with('status', 'pengaturan-berhasil-disimpan');
+        // [UBAH] Standarkan pesan notifikasi
+        return Redirect::route('settings.index')->with('success', 'Pengaturan berhasil diperbarui.');
     }
 }

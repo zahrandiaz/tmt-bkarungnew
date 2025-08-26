@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\Purchase;
-use App\Models\PurchaseDetail;
 use App\Models\Product;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -23,13 +22,17 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
-    private function getDateRange(Request $request)
+    //================================================================================
+    // HELPER METHODS (PRIVATE)
+    //================================================================================
+
+    private function getDateRange(Request $request): array
     {
         if ($request->has('period')) {
             $period = $request->input('period');
             switch ($period) {
                 case 'today':
-                    return [Carbon::today(), Carbon::today()];
+                    return [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()];
                 case 'this_week':
                     return [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()];
                 case 'this_month':
@@ -42,388 +45,243 @@ class ReportController extends Controller
         }
 
         if ($request->has('start_date') && $request->has('end_date')) {
-            $startDate = Carbon::parse($request->input('start_date'));
-            $endDate = Carbon::parse($request->input('end_date'));
-            return [$startDate, $endDate];
+            return [
+                Carbon::parse($request->input('start_date'))->startOfDay(),
+                Carbon::parse($request->input('end_date'))->endOfDay()
+            ];
         }
         
-        return [Carbon::today(), Carbon::today()];
+        return [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()];
     }
+
+    private function getSalesData(Carbon $startDate, Carbon $endDate): array
+    {
+        $salesQuery = Sale::whereNull('deleted_at')
+            ->whereBetween('sale_date', [$startDate, $endDate]);
+
+        $stats = (clone $salesQuery)
+            ->selectRaw('COUNT(*) as total_transactions, SUM(total_amount) as total_revenue')
+            ->first();
+
+        $totalCogs = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
+            $query->whereNull('deleted_at')->whereBetween('sale_date', [$startDate, $endDate]);
+        })->sum(DB::raw('quantity * purchase_price'));
+
+        return [
+            'totalTransactions' => $stats->total_transactions ?? 0,
+            'totalRevenue' => $stats->total_revenue ?? 0,
+            'totalCogs' => $totalCogs,
+            'grossProfit' => ($stats->total_revenue ?? 0) - $totalCogs,
+        ];
+    }
+
+    private function getPurchasesData(Carbon $startDate, Carbon $endDate): array
+    {
+        $purchasesQuery = Purchase::whereNull('deleted_at')
+            ->whereBetween('purchase_date', [$startDate, $endDate]);
+            
+        $stats = (clone $purchasesQuery)
+            ->selectRaw('COUNT(*) as total_transactions, SUM(total_amount) as total_expenditure')
+            ->first();
+
+        return [
+            'totalTransactions' => $stats->total_transactions ?? 0,
+            'totalExpenditure' => $stats->total_expenditure ?? 0,
+        ];
+    }
+
+    //================================================================================
+    // WEB REPORT METHODS
+    //================================================================================
 
     public function salesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $salesQuery = Sale::query()->with('customer');
-        
-        if ($startDate && $endDate) {
-            $salesQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        }
+        $salesData = $this->getSalesData($startDate, $endDate);
 
-        $statsQuery = (clone $salesQuery);
-        $totalTransactions = $statsQuery->count();
-        $totalRevenue = $statsQuery->sum('total_amount');
-
-        $totalCogs = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
-            if ($startDate && $endDate) {
-                $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-            }
-        })->sum(DB::raw('quantity * purchase_price'));
-        
-        $grossProfit = $totalRevenue - $totalCogs;
-
-        $tableQuery = Sale::withTrashed()->with(['customer', 'details']);
-        if ($startDate && $endDate) {
-            $tableQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        }
+        $tableQuery = Sale::withTrashed()->with('customer')
+            ->withSum(['details as total_modal' => function ($query) {
+                $query->select(DB::raw('SUM(quantity * purchase_price)'));
+            }], 'total_modal')
+            ->whereBetween('sale_date', [$startDate, $endDate]);
+            
         $sales = $tableQuery->latest()->paginate(10)->appends($request->query());
-
-        foreach ($sales as $sale) {
-            if (!$sale->trashed()) { 
-                $totalHpp = $sale->details->sum(function ($detail) {
-                    return $detail->quantity * $detail->purchase_price;
-                });
-                $sale->profit = $sale->total_amount - $totalHpp;
-            } else {
-                $sale->profit = 0;
-            }
-        }
 
         return view('reports.sales', [
             'sales' => $sales,
-            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
-            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
             'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
-            'totalTransactions' => $totalTransactions,
-            'totalRevenue' => $totalRevenue,
-            'totalCogs' => $totalCogs,
-            'grossProfit' => $grossProfit,
-        ]);
+        ] + $salesData);
     }
 
     public function purchasesReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $purchasesQuery = Purchase::query();
+        $purchasesData = $this->getPurchasesData($startDate, $endDate);
 
-        if ($startDate && $endDate) {
-            $purchasesQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        }
-
-        $statsQuery = (clone $purchasesQuery);
-        $totalTransactions = $statsQuery->count();
-        $totalExpenditure = $statsQuery->sum('total_amount');
-        
-        $tableQuery = Purchase::withTrashed()->with('supplier');
-        if ($startDate && $endDate) {
-            $tableQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        }
+        $tableQuery = Purchase::withTrashed()->with('supplier')
+            ->whereBetween('purchase_date', [$startDate, $endDate]);
+            
         $purchases = $tableQuery->latest()->paginate(10)->appends($request->query());
 
         return view('reports.purchases', [
             'purchases' => $purchases,
-            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
-            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
             'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
-            'totalTransactions' => $totalTransactions,
-            'totalExpenditure' => $totalExpenditure,
-        ]);
+        ] + $purchasesData);
     }
 
-    // [DIPERBARUI] Tambahkan Request dan logika pencarian
     public function stockReport(Request $request)
     {
         $productsQuery = Product::with(['category', 'type']);
-
-        // Logika pencarian
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $productsQuery->where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('sku', 'like', "%{$search}%");
-            });
+            $productsQuery->where(fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"));
         }
-
         $products = $productsQuery->orderBy('name', 'asc')->paginate(15)->appends($request->query());
-        
         return view('reports.stock', ['products' => $products]);
     }
 
     public function profitAndLossReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $salesDetailsQuery = SaleDetail::query()
-            ->whereHas('sale', function ($query) {
-                $query->where('payment_status', 'Lunas');
-            });
-
-        $expensesQuery = Expense::query(); 
-
-        if ($startDate && $endDate) {
-            $startOfDay = $startDate->copy()->startOfDay();
-            $endOfDay = $endDate->copy()->endOfDay();
-            
-            $salesDetailsQuery->whereHas('sale', function ($query) use ($startOfDay, $endOfDay) {
-                $query->whereBetween('sale_date', [$startOfDay, $endOfDay]);
-            });
-
-            $expensesQuery->whereBetween('expense_date', [$startOfDay, $endOfDay]);
-        }
-
-        $reportData = $salesDetailsQuery
-            ->select(
-                DB::raw('SUM(quantity * sale_price) as total_revenue'),
-                DB::raw('SUM(quantity * purchase_price) as total_cogs')
-            )
-            ->first();
-
-        $totalRevenue = $reportData->total_revenue ?? 0;
-        $totalCostOfGoods = $reportData->total_cogs ?? 0;
-
-        $totalExpenses = $expensesQuery->sum('amount');
-        
-        $expensesByCategory = (clone $expensesQuery)->with('category')
-            ->select('expense_category_id', DB::raw('SUM(amount) as total_amount'))
-            ->groupBy('expense_category_id')
-            ->get();
-
-        $grossProfit = $totalRevenue - $totalCostOfGoods;
-        $netProfit = $grossProfit - $totalExpenses;
-
-        return view('reports.profit_and_loss', [
-            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
-            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
-            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
-            'totalRevenue' => $totalRevenue,
-            'totalCostOfGoods' => $totalCostOfGoods,
-            'grossProfit' => $grossProfit,
-            'totalExpenses' => $totalExpenses,
-            'netProfit' => $netProfit,
-            'expensesByCategory' => $expensesByCategory,
-        ]);
+        $data = $this->getProfitAndLossData($startDate, $endDate);
+        $data['period'] = $request->input('period', $request->has('start_date') ? null : 'today');
+        return view('reports.profit_and_loss', $data);
     }
 
     public function depositReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $salesQuery = Sale::query()
-            ->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
 
         $totalDeposit = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+            $query->whereNull('deleted_at')->whereBetween('sale_date', [$startDate, $endDate]);
         })->sum(DB::raw('quantity * purchase_price'));
         
-        $sales = (clone $salesQuery)->with('customer', 'details')
+        $sales = Sale::whereNull('deleted_at')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->with('customer')
+            ->withSum(['details as total_modal' => function ($query) {
+                $query->select(DB::raw('SUM(quantity * purchase_price)'));
+            }], 'total_modal')
             ->latest()
             ->paginate(10)
             ->appends($request->query());
 
-        foreach ($sales as $sale) {
-            $sale->total_modal = $sale->details->sum(function ($detail) {
-                return $detail->quantity * $detail->purchase_price;
-            });
-        }
-
         return view('reports.deposits', [
             'sales' => $sales,
             'totalDeposit' => $totalDeposit,
-            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
-            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
-            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
-        ]);
-    }
-
-    private function getCashFlowData(Carbon $startDate, Carbon $endDate): array
-    {
-        $startOfDay = $startDate->copy()->startOfDay();
-        $endOfDay = $endDate->copy()->endOfDay();
-
-        $cashInflowsQuery = Payment::query()->where('payable_type', Sale::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
-        $purchaseOutflowsQuery = Payment::query()->where('payable_type', Purchase::class)->whereBetween('payment_date', [$startOfDay, $endOfDay]);
-        $expenseOutflowsQuery = Expense::query()->whereBetween('expense_date', [$startOfDay, $endOfDay]);
-
-        $receivablesQuery = Sale::query()->where('payment_status', 'Belum Lunas')->whereBetween('sale_date', [$startOfDay, $endOfDay]);
-        $payablesQuery = Purchase::query()->where('payment_status', 'Belum Lunas')->whereBetween('purchase_date', [$startOfDay, $endOfDay]);
-
-        $totalInflow = (clone $cashInflowsQuery)->sum('amount');
-        $totalPurchaseOutflow = (clone $purchaseOutflowsQuery)->sum('amount');
-        $totalExpenseOutflow = (clone $expenseOutflowsQuery)->sum('amount');
-        $totalOutflow = $totalPurchaseOutflow + $totalExpenseOutflow;
-        $netCashFlow = $totalInflow - $totalOutflow;
-        $totalReceivables = (clone $receivablesQuery)->sum(DB::raw('total_amount - total_paid'));
-        $totalPayables = (clone $payablesQuery)->sum(DB::raw('total_amount - total_paid'));
-
-        return [
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate->format('Y-m-d'),
-            'totalInflow' => $totalInflow,
-            'totalOutflow' => $totalOutflow,
-            'netCashFlow' => $netCashFlow,
-            'inflows' => (clone $cashInflowsQuery)->with('payable.customer')->latest('payment_date')->get(),
-            'purchaseOutflows' => (clone $purchaseOutflowsQuery)->with('payable.supplier')->latest('payment_date')->get(),
-            'expenseOutflows' => (clone $expenseOutflowsQuery)->with('category')->latest('expense_date')->get(),
-            'totalReceivables' => $totalReceivables,
-            'totalPayables' => $totalPayables,
-            'receivables' => (clone $receivablesQuery)->with('customer')->latest('sale_date')->get(),
-            'payables' => (clone $payablesQuery)->with('supplier')->latest('purchase_date')->get(),
-        ];
+            'period' => $request->input('period', $request->has('start_date') ? null : 'today'),
+        ]);
     }
 
     public function cashFlowReport(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        if ($request->has('export')) {
-            if ($request->input('export') === 'csv') {
-                return $this->exportCashFlowCsv($startDate, $endDate);
-            }
-            if ($request->input('export') === 'pdf') {
-                return $this->exportCashFlowPdf($startDate, $endDate);
-            }
-        }
-
         $data = $this->getCashFlowData($startDate, $endDate);
         $data['period'] = $request->input('period', $request->has('start_date') ? null : 'today');
-
         return view('reports.cash_flow', $data);
     }
 
-    private function exportCashFlowCsv(Carbon $startDate, Carbon $endDate)
-    {
-        $data = $this->getCashFlowData($startDate, $endDate);
-        $fileName = 'laporan-arus-kas-' . Carbon::now()->format('Y-m-d') . '.csv';
-        return Excel::download(new CashFlowExport($data), $fileName);
-    }
+    //================================================================================
+    // API & EXPORT METHODS
+    //================================================================================
 
-    private function exportCashFlowPdf(Carbon $startDate, Carbon $endDate)
-    {
-        $data = $this->getCashFlowData($startDate, $endDate);
-        $pdf = Pdf::loadView('reports.pdf.cash_flow', $data);
-        $fileName = 'laporan-arus-kas-' . Carbon::now()->format('Y-m-d') . '.pdf';
-        return $pdf->stream($fileName);
-    }
-    
     public function getSaleDetails($id)
     {
         $sale = Sale::withTrashed()->with('details.product')->find($id);
-        if (!$sale) {
-            return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
-        }
-        return response()->json($sale->details);
+        return response()->json($sale ? $sale->details : [], $sale ? 200 : 404);
     }
 
     public function getPurchaseDetails($id)
     {
         $purchase = Purchase::withTrashed()->with('details.product')->find($id);
-        if (!$purchase) {
-            return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
-        }
-        return response()->json($purchase->details);
+        return response()->json($purchase ? $purchase->details : [], $purchase ? 200 : 404);
     }
-
+    
     public function exportSalesCsv(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $fileName = 'laporan-penjualan-' . Carbon::now()->format('Y-m-d') . '.csv';
+        [$startDate, $endDate] = $this->getDateRange($request);
+        $fileName = 'laporan-penjualan-' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.csv';
         return Excel::download(new SalesExport($startDate, $endDate), $fileName);
     }
 
     public function exportSalesPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $salesQuery = Sale::query()->with('customer');
-        $salesQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+        $salesData = $this->getSalesData($startDate, $endDate);
 
-        $statsQuery = (clone $salesQuery);
-        $totalTransactions = $statsQuery->count();
-        $totalRevenue = $statsQuery->sum('total_amount');
-
-        $totalCogs = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        })->sum(DB::raw('quantity * purchase_price'));
-        
-        $grossProfit = $totalRevenue - $totalCogs;
-
-        $tableQuery = Sale::withTrashed()->with(['customer', 'details']);
-        $tableQuery->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        $sales = $tableQuery->latest()->get();
-
-        foreach ($sales as $sale) {
-            if (!$sale->trashed()) {
-                $totalHpp = $sale->details->sum(fn($detail) => $detail->quantity * $detail->purchase_price);
-                $sale->profit = $sale->total_amount - $totalHpp;
-            } else {
-                $sale->profit = 0;
-            }
-        }
+        $sales = Sale::withTrashed()->with(['customer', 'details.product'])
+            ->withSum(['details as total_modal' => fn($q) => $q->select(DB::raw('SUM(quantity * purchase_price)'))], 'total_modal')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->latest()->get();
 
         $pdf = Pdf::loadView('reports.pdf.sales', [
             'sales' => $sales,
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate->format('Y-m-d'),
-            'totalTransactions' => $totalTransactions,
-            'totalRevenue' => $totalRevenue,
-            'totalCogs' => $totalCogs,
-            'grossProfit' => $grossProfit,
-        ]);
+        ] + $salesData);
 
-        $fileName = 'laporan-penjualan-' . Carbon::now()->format('Y-m-d') . '.pdf';
-        return $pdf->stream($fileName);
+        return $pdf->stream('laporan-penjualan-' . $startDate->format('Y-m-d') . '.pdf');
     }
 
     public function exportPurchasesCsv(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $fileName = 'laporan-pembelian-' . Carbon::now()->format('Y-m-d') . '.csv';
+        [$startDate, $endDate] = $this->getDateRange($request);
+        $fileName = 'laporan-pembelian-' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.csv';
         return Excel::download(new PurchasesExport($startDate, $endDate), $fileName);
     }
 
     public function exportPurchasesPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
-        $purchasesQuery = Purchase::query();
-        $purchasesQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
+        $purchasesData = $this->getPurchasesData($startDate, $endDate);
 
-        $statsQuery = (clone $purchasesQuery);
-        $totalTransactions = $statsQuery->count();
-        $totalExpenditure = $statsQuery->sum('total_amount');
-        
-        $tableQuery = Purchase::withTrashed()->with('supplier');
-        $tableQuery->whereBetween('purchase_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        $purchases = $tableQuery->latest()->get();
+        $purchases = Purchase::withTrashed()->with(['supplier', 'details.product'])
+            ->whereBetween('purchase_date', [$startDate, $endDate])
+            ->latest()->get();
 
         $pdf = Pdf::loadView('reports.pdf.purchases', [
             'purchases' => $purchases,
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate->format('Y-m-d'),
-            'totalTransactions' => $totalTransactions,
-            'totalExpenditure' => $totalExpenditure,
-        ]);
-
-        $fileName = 'laporan-pembelian-' . Carbon::now()->format('Y-m-d') . '.pdf';
-        return $pdf->stream($fileName);
+        ] + $purchasesData);
+        
+        return $pdf->stream('laporan-pembelian-' . $startDate->format('Y-m-d') . '.pdf');
     }
 
-    public function exportStock(Request $request) // [DIPERBARUI] Terima Request
+    public function exportStock(Request $request)
     {
-        $search = $request->input('search'); // [BARU] Ambil nilai pencarian
+        $search = $request->input('search');
         $fileName = 'laporan-stok-' . Carbon::now()->format('Y-m-d') . '.csv';
-        return Excel::download(new StockExport($search), $fileName); // [DIPERBARUI] Kirim nilai search ke Export
+        return Excel::download(new StockExport($search), $fileName);
+    }
+
+    public function exportStockPdf(Request $request)
+    {
+        $search = $request->input('search');
+        $productsQuery = Product::with(['category', 'type']);
+        if ($search) {
+            $productsQuery->where(fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"));
+        }
+        $products = $productsQuery->orderBy('name', 'asc')->get();
+
+        $pdf = Pdf::loadView('reports.pdf.stock', [
+            'products' => $products,
+            'search' => $search,
+        ]);
+        
+        return $pdf->stream('laporan-stok-' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
 
     public function exportDepositsCsv(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $fileName = 'laporan-setoran-' . Carbon::now()->format('Y-m-d') . '.csv';
-        
+        [$startDate, $endDate] = $this->getDateRange($request);
+        $fileName = 'laporan-setoran-' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.csv';
         return Excel::download(new DepositsExport($startDate, $endDate), $fileName);
     }
 
@@ -431,20 +289,14 @@ class ReportController extends Controller
     {
         [$startDate, $endDate] = $this->getDateRange($request);
         
-        $salesQuery = Sale::query()
-            ->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-
-        $totalDeposit = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('sale_date', [$startDate->startOfDay(), $endDate->endOfDay()]);
-        })->sum(DB::raw('quantity * purchase_price'));
+        $totalDeposit = SaleDetail::whereHas('sale', fn($q) => $q->whereNull('deleted_at')->whereBetween('sale_date', [$startDate, $endDate]))
+            ->sum(DB::raw('quantity * purchase_price'));
         
-        $sales = (clone $salesQuery)->with('customer', 'details')->latest()->get();
-
-        foreach ($sales as $sale) {
-            $sale->total_modal = $sale->details->sum(function ($detail) {
-                return $detail->quantity * $detail->purchase_price;
-            });
-        }
+        $sales = Sale::whereNull('deleted_at')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->with(['customer', 'details.product'])
+            ->withSum(['details as total_modal' => fn($q) => $q->select(DB::raw('SUM(quantity * purchase_price)'))], 'total_modal')
+            ->latest()->get();
 
         $pdf = Pdf::loadView('reports.pdf.deposits', [
             'sales' => $sales,
@@ -453,59 +305,54 @@ class ReportController extends Controller
             'endDate' => $endDate->format('Y-m-d'),
         ]);
 
-        $fileName = 'laporan-setoran-' . Carbon::now()->format('Y-m-d') . '.pdf';
-        return $pdf->stream($fileName);
+        return $pdf->stream('laporan-setoran-' . $startDate->format('Y-m-d') . '.pdf');
     }
 
     public function exportProfitAndLossCsv(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-        
         $data = $this->getProfitAndLossData($startDate, $endDate);
-
-        $fileName = 'laporan-laba-rugi-' . Carbon::now()->format('Y-m-d') . '.csv';
+        $fileName = 'laporan-laba-rugi-' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.csv';
         return Excel::download(new ProfitAndLossExport($data), $fileName);
     }
 
     public function exportProfitAndLossPdf(Request $request)
     {
         [$startDate, $endDate] = $this->getDateRange($request);
-
         $data = $this->getProfitAndLossData($startDate, $endDate);
-        
         $pdf = Pdf::loadView('reports.pdf.profit_and_loss', $data);
+        return $pdf->stream('laporan-laba-rugi-' . $startDate->format('Y-m-d') . '.pdf');
+    }
+    
+    private function exportCashFlowCsv(Carbon $startDate, Carbon $endDate)
+    {
+        $data = $this->getCashFlowData($startDate, $endDate);
+        $fileName = 'laporan-arus-kas-' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.csv';
+        return Excel::download(new CashFlowExport($data), $fileName);
+    }
 
-        $fileName = 'laporan-laba-rugi-' . Carbon::now()->format('Y-m-d') . '.pdf';
-        return $pdf->stream($fileName);
+    private function exportCashFlowPdf(Carbon $startDate, Carbon $endDate)
+    {
+        $data = $this->getCashFlowData($startDate, $endDate);
+        $pdf = Pdf::loadView('reports.pdf.cash_flow', $data);
+        return $pdf->stream('laporan-arus-kas-' . $startDate->format('Y-m-d') . '.pdf');
     }
 
     private function getProfitAndLossData(Carbon $startDate, Carbon $endDate): array
     {
-        $salesDetailsQuery = SaleDetail::query()
-            ->whereHas('sale', function ($query) {
-                $query->where('payment_status', 'Lunas');
-            });
-
-        $expensesQuery = Expense::query(); 
-
-        $startOfDay = $startDate->copy()->startOfDay();
-        $endOfDay = $endDate->copy()->endOfDay();
-        
-        $salesDetailsQuery->whereHas('sale', function ($query) use ($startOfDay, $endOfDay) {
-            $query->whereBetween('sale_date', [$startOfDay, $endOfDay]);
+        // Query dasar untuk penjualan dan biaya (tidak berubah)
+        $salesDetailsQuery = SaleDetail::whereHas('sale', function ($query) use ($startDate, $endDate) {
+            $query->whereNull('deleted_at')->whereBetween('sale_date', [$startDate, $endDate]);
         });
+        $expensesQuery = Expense::query()->whereBetween('expense_date', [$startDate, $endDate]);
 
-        $expensesQuery->whereBetween('expense_date', [$startOfDay, $endOfDay]);
-
+        // Kalkulasi ringkasan (tidak berubah)
         $reportData = (clone $salesDetailsQuery)
-            ->select(
-                DB::raw('SUM(quantity * sale_price) as total_revenue'),
-                DB::raw('SUM(quantity * purchase_price) as total_cogs')
-            )
+            ->selectRaw('SUM(quantity * sale_price) as total_revenue, SUM(quantity * purchase_price) as total_cogs')
             ->first();
 
         $totalRevenue = $reportData->total_revenue ?? 0;
-        $totalCostOfGoods = $reportData->total_cogs ?? 0;
+        $totalCogs = $reportData->total_cogs ?? 0;
         $totalExpenses = (clone $expensesQuery)->sum('amount');
         
         $expensesByCategory = (clone $expensesQuery)->with('category')
@@ -513,18 +360,63 @@ class ReportController extends Controller
             ->groupBy('expense_category_id')
             ->get();
 
-        $grossProfit = $totalRevenue - $totalCostOfGoods;
-        $netProfit = $grossProfit - $totalExpenses;
+        // [BARU] Ambil data rincian untuk diekspor
+        $sales = Sale::whereNull('deleted_at')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->with('customer')
+            ->withSum(['details as total_modal' => fn($q) => $q->select(DB::raw('SUM(quantity * purchase_price)'))], 'total_modal')
+            ->get();
+            
+        $expenses = (clone $expensesQuery)->with('category')->get();
 
         return [
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate->format('Y-m-d'),
             'totalRevenue' => $totalRevenue,
-            'totalCostOfGoods' => $totalCostOfGoods,
-            'grossProfit' => $grossProfit,
+            'totalCostOfGoods' => $totalCogs,
+            'grossProfit' => $totalRevenue - $totalCogs,
             'totalExpenses' => $totalExpenses,
-            'netProfit' => $netProfit,
+            'netProfit' => $totalRevenue - $totalCogs - $totalExpenses,
             'expensesByCategory' => $expensesByCategory,
+            'sales' => $sales, // <-- [BARU] Kirim rincian penjualan
+            'expenses' => $expenses, // <-- [BARU] Kirim rincian biaya
+        ];
+    }
+
+    private function getCashFlowData(Carbon $startDate, Carbon $endDate): array
+    {
+        $inflowsQuery = Payment::where('payable_type', Sale::class)
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->whereHas('payable', fn($q) => $q->whereNull('deleted_at'));
+
+        $purchaseOutflowsQuery = Payment::where('payable_type', Purchase::class)
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->whereHas('payable', fn($q) => $q->whereNull('deleted_at'));
+
+        $expenseOutflowsQuery = Expense::query()->whereBetween('expense_date', [$startDate, $endDate]);
+
+        $receivablesQuery = Sale::whereNull('deleted_at')->where('payment_status', 'Belum Lunas')->whereBetween('sale_date', [$startDate, $endDate]);
+        $payablesQuery = Purchase::whereNull('deleted_at')->where('payment_status', 'Belum Lunas')->whereBetween('purchase_date', [$startDate, $endDate]);
+
+        $totalInflow = (clone $inflowsQuery)->sum('amount');
+        $totalPurchaseOutflow = (clone $purchaseOutflowsQuery)->sum('amount');
+        $totalExpenseOutflow = (clone $expenseOutflowsQuery)->sum('amount');
+        $totalReceivables = (clone $receivablesQuery)->sum(DB::raw('total_amount - total_paid'));
+        $totalPayables = (clone $payablesQuery)->sum(DB::raw('total_amount - total_paid'));
+
+        return [
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
+            'totalInflow' => $totalInflow,
+            'totalOutflow' => $totalPurchaseOutflow + $totalExpenseOutflow,
+            'netCashFlow' => $totalInflow - ($totalPurchaseOutflow + $totalExpenseOutflow),
+            'inflows' => (clone $inflowsQuery)->with('payable.customer')->latest('payment_date')->get(),
+            'purchaseOutflows' => (clone $purchaseOutflowsQuery)->with('payable.supplier')->latest('payment_date')->get(),
+            'expenseOutflows' => (clone $expenseOutflowsQuery)->with('category')->latest('expense_date')->get(),
+            'totalReceivables' => $totalReceivables,
+            'totalPayables' => $totalPayables,
+            'receivables' => (clone $receivablesQuery)->with('customer')->latest('sale_date')->get(),
+            'payables' => (clone $payablesQuery)->with('supplier')->latest('purchase_date')->get(),
         ];
     }
 }

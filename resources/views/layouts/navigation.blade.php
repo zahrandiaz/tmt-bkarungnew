@@ -23,33 +23,13 @@
                                 </button>
                             </x-slot>
                             <x-slot name="content">
-                                @can('role-view')
-                                    <x-dropdown-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-dropdown-link>
-                                @endcan
-                                @can('user-view')
-                                    <x-dropdown-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-dropdown-link>
-                                @endcan
-                                @can('role-edit')
-                                    <x-dropdown-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-dropdown-link>
-                                    <x-dropdown-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-dropdown-link>
-                                @endcan
-                                {{-- [BARU] Tautan Log Aktivitas --}}
-                                @can('log-view')
-                                    <x-dropdown-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.index')">{{ __('Log Aktivitas') }}</x-dropdown-link>
-                                @endcan
-                                <x-dropdown-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-dropdown-link>
-                                @can('adjustment-price')
-                                    <x-dropdown-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga Jual') }}</x-dropdown-link>
-                                @endcan
-                                @can('adjustment-stock')
-                                    <x-dropdown-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-dropdown-link>
-                                @endcan
-                                <x-dropdown-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('product-categories.index')">{{ __('Kategori Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('product-types.index')">{{ __('Jenis Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('products.index')">{{ __('Produk') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('suppliers.index')">{{ __('Supplier') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('customers.index')">{{ __('Pelanggan') }}</x-dropdown-link>
                                 @can('finance-crud-expense')
-                                    <x-dropdown-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('expense-categories.index')">{{ __('Kategori Biaya') }}</x-dropdown-link>
                                 @endcan
                             </x-slot>
                         </x-dropdown>
@@ -70,8 +50,11 @@
                                 <x-dropdown-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('purchase-returns.index')">{{ __('Retur Pembelian') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('sale-returns.index')">{{ __('Retur Penjualan') }}</x-dropdown-link>
-                                @can('transaction-create')
-                                <x-dropdown-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-dropdown-link>
+                                @can('adjustment-price')
+                                <x-dropdown-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga') }}</x-dropdown-link>
+                                @endcan
+                                @can('adjustment-stock')
+                                <x-dropdown-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-dropdown-link>
                                 @endcan
                             </x-slot>
                         </x-dropdown>
@@ -118,6 +101,32 @@
                         </x-dropdown>
                     </div>
                     @endcan
+
+                    @can('role-view')
+                    <div class="hidden sm:flex sm:items-center sm:ms-6">
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                    <div>Sistem</div>
+                                    <div class="ms-1"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></div>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                <x-dropdown-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-dropdown-link>
+                                @can('user-view')
+                                <x-dropdown-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-dropdown-link>
+                                @endcan
+                                @can('role-edit')
+                                <x-dropdown-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('settings.index')">{{ __('Pengaturan') }}</x-dropdown-link>
+                                @endcan
+                                @can('log-view')
+                                <x-dropdown-link :href="route('activity-log.index')">{{ __('Log Aktivitas') }}</x-dropdown-link>
+                                @endcan
+                            </x-slot>
+                        </x-dropdown>
+                    </div>
+                    @endcan
                 </div>
             </div>
 
@@ -131,15 +140,10 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
+                        <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
+                            <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">
                                 {{ __('Log Out') }}
                             </x-dropdown-link>
                         </form>
@@ -167,37 +171,15 @@
 
         @can('product-view')
         <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">Master Data</div>
-            </div>
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Master Data</div></div>
             <div class="mt-3 space-y-1">
-                @can('role-view')
-                    <x-responsive-nav-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-responsive-nav-link>
-                @endcan
-                @can('user-view')
-                    <x-responsive-nav-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-responsive-nav-link>
-                @endcan
-                @can('role-edit')
-                    <x-responsive-nav-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('settings.index')" :active="request()->routeIs('settings.index')">{{ __('Pengaturan') }}</x-responsive-nav-link>
-                @endcan
-                {{-- [BARU] Tautan Log Aktivitas (Responsive) --}}
-                @can('log-view')
-                    <x-responsive-nav-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.index')">{{ __('Log Aktivitas') }}</x-responsive-nav-link>
-                @endcan
-                <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Manajemen Kategori Produk') }}</x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('product-types.index')">{{ __('Manajemen Jenis Produk') }}</x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('products.index')">{{ __('Manajemen Produk') }}</x-responsive-nav-link>
-                @can('adjustment-price')
-                    <x-responsive-nav-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga Jual') }}</x-responsive-nav-link>
-                @endcan
-                @can('adjustment-stock')
-                    <x-responsive-nav-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-responsive-nav-link>
-                @endcan
-                <x-responsive-nav-link :href="route('suppliers.index')">{{ __('Manajemen Supplier') }}</x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('customers.index')">{{ __('Manajemen Pelanggan') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('product-categories.index')">{{ __('Kategori Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('product-types.index')">{{ __('Jenis Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('products.index')">{{ __('Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('suppliers.index')">{{ __('Supplier') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('customers.index')">{{ __('Pelanggan') }}</x-responsive-nav-link>
                 @can('finance-crud-expense')
-                    <x-responsive-nav-link :href="route('expense-categories.index')">{{ __('Manajemen Kategori Biaya') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('expense-categories.index')">{{ __('Kategori Biaya') }}</x-responsive-nav-link>
                 @endcan
             </div>
         </div>
@@ -205,46 +187,66 @@
 
         @can('transaction-view')
         <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">Transaksi</div>
-            </div>
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Transaksi</div></div>
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('purchases.index')">{{ __('Daftar Pembelian') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('sales.index')">{{ __('Daftar Penjualan') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('purchase-returns.index')">{{ __('Retur Pembelian') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('sale-returns.index')">{{ __('Retur Penjualan') }}</x-responsive-nav-link>
-                @can('transaction-create')
-                <x-responsive-nav-link :href="route('sales.create')">{{ __('+ Tambah Penjualan') }}</x-responsive-nav-link>
+                @can('adjustment-price')
+                <x-responsive-nav-link :href="route('price-adjustments.index')">{{ __('Penyesuaian Harga') }}</x-responsive-nav-link>
+                @endcan
+                @can('adjustment-stock')
+                <x-responsive-nav-link :href="route('stock-adjustments.index')">{{ __('Penyesuaian Stok') }}</x-responsive-nav-link>
+                @endcan
+            </div>
+        </div>
+        @endcan
+        
+        @can('finance-view')
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Keuangan</div></div>
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('receivables.index')">{{ __('Manajemen Piutang') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('debts.index')">{{ __('Manajemen Utang') }}</x-responsive-nav-link>
+                @can('finance-crud-expense')
+                <x-responsive-nav-link :href="route('expenses.index')">{{ __('Manajemen Biaya') }}</x-responsive-nav-link>
                 @endcan
             </div>
         </div>
         @endcan
 
-        @can('finance-view')
-        <div class="pt-4 pb-1 border-t border-gray-200">
-                <div class="px-4"><div class="font-medium text-base text-gray-800">Keuangan</div></div>
-                <div class="mt-3 space-y-1">
-                    <x-responsive-nav-link :href="route('receivables.index')">{{ __('Manajemen Piutang') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('debts.index')">{{ __('Manajemen Utang') }}</x-responsive-nav-link>
-                    @can('finance-crud-expense')
-                    <x-responsive-nav-link :href="route('expenses.index')">{{ __('Manajemen Biaya') }}</x-responsive-nav-link>
-                    @endcan
-                </div>
-            </div>
-        @endcan
-
         @can('report-view-all')
         <div class="pt-4 pb-1 border-t border-gray-200">
-                <div class="px-4"><div class="font-medium text-base text-gray-800">Laporan</div></div>
-                <div class="mt-3 space-y-1">
-                    <x-responsive-nav-link :href="route('reports.sales')">{{ __('Laporan Penjualan') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('reports.purchases')">{{ __('Laporan Pembelian') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('reports.deposits')" :active="request()->routeIs('reports.deposits')">{{ __('Laporan Setoran') }}</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('reports.cash-flow')" :active="request()->routeIs('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-responsive-nav-link>
-                </div>
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Laporan</div></div>
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('reports.sales')">{{ __('Laporan Penjualan') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.purchases')">{{ __('Laporan Pembelian') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.stock')">{{ __('Laporan Stok Produk') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.profit-loss')">{{ __('Laporan Laba Rugi') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.deposits')">{{ __('Laporan Setoran') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.cash-flow')">{{ __('Laporan Arus Kas') }}</x-responsive-nav-link>
             </div>
+        </div>
+        @endcan
+
+        @can('role-view')
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4"><div class="font-medium text-base text-gray-800">Sistem</div></div>
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('roles.index')">{{ __('Manajemen Peran') }}</x-responsive-nav-link>
+                @can('user-view')
+                <x-responsive-nav-link :href="route('users.index')">{{ __('Manajemen Pengguna') }}</x-responsive-nav-link>
+                @endcan
+                @can('role-edit')
+                <x-responsive-nav-link :href="route('permissions.index')">{{ __('Manajemen Hak Akses') }}</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('settings.index')">{{ __('Pengaturan') }}</x-responsive-nav-link>
+                @endcan
+                @can('log-view')
+                <x-responsive-nav-link :href="route('activity-log.index')">{{ __('Log Aktivitas') }}</x-responsive-nav-link>
+                @endcan
+            </div>
+        </div>
         @endcan
 
         <div class="pt-4 pb-1 border-t border-gray-200">

@@ -12,25 +12,49 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
 
-                    <div class="mb-6">
+                    {{-- [DIUBAH] Form filter yang lebih lengkap --}}
+                    <div class="mb-6" x-data="{
+                        startDate: '{{ $startDate ?? '' }}',
+                        endDate: '{{ $endDate ?? '' }}',
+                        period: '{{ $period }}',
+                        clearPeriod() {
+                            if (this.startDate || this.endDate) {
+                                this.period = 'all_time';
+                            }
+                        }
+                    }">
                         <form action="{{ route('activity-log.index') }}" method="GET">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                                 <!-- Pencarian -->
                                 <div class="md:col-span-2">
                                     <label for="search" class="block text-sm font-medium text-gray-700">Cari Deskripsi / Pengguna</label>
                                     <input type="text" name="search" id="search" placeholder="Cari..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="{{ $search ?? '' }}">
                                 </div>
+                                
+                                <!-- [BARU] Tanggal Mulai -->
+                                <div>
+                                    <label for="start_date" class="block text-sm font-medium text-gray-700">Tanggal Mulai</label>
+                                    <input type="date" name="start_date" id="start_date" x-model="startDate" @change="clearPeriod" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                </div>
+
+                                <!-- [BARU] Tanggal Selesai -->
+                                <div>
+                                    <label for="end_date" class="block text-sm font-medium text-gray-700">Tanggal Selesai</label>
+                                    <input type="date" name="end_date" id="end_date" x-model="endDate" @change="clearPeriod" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                </div>
+
                                 <!-- Filter Periode -->
                                 <div>
-                                    <label for="period" class="block text-sm font-medium text-gray-700">Periode</label>
-                                    <select name="period" id="period" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                        <option value="all_time" @selected($period == 'all_time')>Seluruh Waktu</option>
-                                        <option value="today" @selected($period == 'today')>Hari Ini</option>
-                                        <option value="this_week" @selected($period == 'this_week')>Minggu Ini</option>
-                                        <option value="this_month" @selected($period == 'this_month')>Bulan Ini</option>
-                                        <option value="this_year" @selected($period == 'this_year')>Tahun Ini</option>
+                                    <label for="period" class="block text-sm font-medium text-gray-700">Periode Cepat</label>
+                                    <select name="period" id="period" x-model="period" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                        <option value="all_time">Seluruh Waktu</option>
+                                        <option value="today">Hari Ini</option>
+                                        <option value="this_week">Minggu Ini</option>
+                                        <option value="this_month">Bulan Ini</option>
+                                        <option value="this_year">Tahun Ini</option>
                                     </select>
                                 </div>
+                                
                                 <!-- Tombol Filter -->
                                 <div class="flex space-x-2">
                                     <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">Filter</button>
