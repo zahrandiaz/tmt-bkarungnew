@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductType;
-use Illuminate\Http\Request; // [MODIFIKASI V1.14.0] Tambahkan Request
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -15,9 +15,6 @@ use Intervention\Image\Laravel\Facades\Image;
 
 class ProductController extends Controller
 {
-    /**
-     * [MODIFIKASI V1.14.0] Tambahkan logika pencarian.
-     */
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -46,7 +43,11 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request)
     {
         $validated = $request->validated();
-        $validated['sku'] = 'SKU-' . strtoupper(Str::random(8));
+        
+        // [PERBAIKAN] Hanya buat SKU jika tidak diisi. Jika diisi, gunakan nilai dari form.
+        if (empty($validated['sku'])) {
+            $validated['sku'] = 'SKU-' . strtoupper(Str::random(8));
+        }
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
@@ -70,6 +71,12 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product)
     {
         $validated = $request->validated();
+        
+        // [PERBAIKAN] Terapkan logika yang sama untuk update
+        if (empty($validated['sku'])) {
+            $validated['sku'] = 'SKU-' . strtoupper(Str::random(8));
+        }
+        
         if ($request->hasFile('image')) {
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
@@ -80,6 +87,7 @@ class ProductController extends Controller
             Storage::disk('public')->put('products/' . $fileName, (string) $imageCompressed);
             $validated['image_path'] = 'products/' . $fileName;
         }
+        
         $product->update($validated);
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }

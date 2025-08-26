@@ -16,6 +16,8 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
+            // [BARU] Tambahkan validasi untuk SKU
+            'sku' => 'nullable|string|max:255|unique:karung_products,sku',
             'product_category_id' => 'required|exists:karung_product_categories,id',
             'product_type_id' => 'required|exists:karung_product_types,id',
             'purchase_price' => 'required|numeric|min:0',
