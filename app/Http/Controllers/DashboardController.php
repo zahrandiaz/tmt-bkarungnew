@@ -17,29 +17,29 @@ class DashboardController extends Controller
      */
     public function __invoke(Request $request)
     {
-        // 1. Data Penjualan Hari Ini
-        $todaySales = Sale::whereDate('created_at', Carbon::today())->get();
-        $totalTodaySales = $todaySales->sum('total_amount');
-        $countTodaySales = $todaySales->count();
+        // [OPTIMALISASI & PERBAIKAN] Gunakan query agregat dan kolom tanggal yang benar
+        $salesData = Sale::whereDate('sale_date', Carbon::today())
+            ->selectRaw('SUM(total_amount) as total, COUNT(*) as count')
+            ->first();
 
-        // 2. Data Pembelian Hari Ini
-        $countTodayPurchases = Purchase::whereDate('created_at', Carbon::today())->count();
+        // [PERBAIKAN] Gunakan kolom tanggal yang benar
+        $countTodayPurchases = Purchase::whereDate('purchase_date', Carbon::today())->count();
 
-        // 3. Data Pelanggan
+        // Data Pelanggan
         $totalCustomers = Customer::count();
 
-        // 4. Data Produk
+        // Data Produk
         $totalProducts = Product::count();
 
-        // 5. [DIPERBAIKI] Data Produk Stok Kritis
+        // Data Produk Stok Kritis (Logika ini sudah benar dan efisien)
         $criticalStockProducts = Product::where('stock', '<=', DB::raw('min_stock_level'))
-                                        ->where('min_stock_level', '>', 0) // Hanya ambil produk yg punya pengaturan stok minimum
-                                        ->orderBy('stock', 'asc') // Urutkan dari stok paling sedikit
+                                        ->where('min_stock_level', '>', 0)
+                                        ->orderBy('stock', 'asc')
                                         ->get();
 
         return view('dashboard', [
-            'totalTodaySales' => $totalTodaySales,
-            'countTodaySales' => $countTodaySales,
+            'totalTodaySales' => $salesData->total ?? 0,
+            'countTodaySales' => $salesData->count ?? 0,
             'countTodayPurchases' => $countTodayPurchases,
             'totalCustomers' => $totalCustomers,
             'totalProducts' => $totalProducts,

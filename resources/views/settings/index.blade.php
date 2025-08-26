@@ -10,10 +10,15 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
                     
-                    @if (session('status') === 'pengaturan-berhasil-disimpan')
-                        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-                            <strong class="font-bold">Sukses!</strong>
-                            <span class="block sm:inline">Pengaturan berhasil disimpan.</span>
+                    {{-- [DIUBAH] Menggunakan blok notifikasi standar --}}
+                    @if (session('success'))
+                        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md" role="alert">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if ($errors->any())
+                        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md" role="alert">
+                            Terjadi kesalahan validasi. Silakan periksa kembali input Anda.
                         </div>
                     @endif
 
@@ -21,35 +26,30 @@
                         @csrf
                         
                         <div class="space-y-8">
-                            <!-- [BARU] Bagian Pengaturan Umum Toko -->
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Pengaturan Umum Toko</h3>
                                 <p class="mt-1 text-sm text-gray-600">
                                     Informasi ini akan ditampilkan pada semua dokumen cetak seperti invoice dan laporan.
                                 </p>
                                 <div class="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                                    <!-- Nama Toko -->
                                     <div class="sm:col-span-4">
                                         <label for="store_name" class="block text-sm font-medium text-gray-700">Nama Toko</label>
                                         <input type="text" name="store_name" id="store_name" value="{{ $settings['store_name'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                         <x-input-error :messages="$errors->get('store_name')" class="mt-2" />
                                     </div>
 
-                                    <!-- Nomor Telepon -->
                                     <div class="sm:col-span-2">
                                         <label for="store_phone" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
                                         <input type="text" name="store_phone" id="store_phone" value="{{ $settings['store_phone'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                         <x-input-error :messages="$errors->get('store_phone')" class="mt-2" />
                                     </div>
 
-                                    <!-- Alamat Toko -->
                                     <div class="sm:col-span-6">
                                         <label for="store_address" class="block text-sm font-medium text-gray-700">Alamat Toko</label>
                                         <textarea id="store_address" name="store_address" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ $settings['store_address'] ?? '' }}</textarea>
                                         <x-input-error :messages="$errors->get('store_address')" class="mt-2" />
                                     </div>
 
-                                    <!-- Catatan Kaki Nota -->
                                     <div class="sm:col-span-6">
                                         <label for="invoice_footer_notes" class="block text-sm font-medium text-gray-700">Catatan Kaki Nota/Invoice</label>
                                         <textarea id="invoice_footer_notes" name="invoice_footer_notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ $settings['invoice_footer_notes'] ?? '' }}</textarea>
@@ -58,7 +58,6 @@
                                 </div>
                             </div>
 
-                            <!-- Bagian Manajemen Stok -->
                             <div class="border-t border-gray-200 pt-8">
                                 <h3 class="text-lg font-medium text-gray-900">Manajemen Stok</h3>
                                 <div class="mt-4">

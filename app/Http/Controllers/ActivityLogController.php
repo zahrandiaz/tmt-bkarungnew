@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
-// [BARU] Tambahkan use statement yang diperlukan
 use Carbon\Carbon;
 use App\Exports\ActivityLogExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -12,17 +11,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ActivityLogController extends Controller
 {
-    /**
-     * [BARU] Private method untuk mengambil dan memfilter data log.
-     */
     private function getActivityData(Request $request)
     {
         $search = $request->query('search');
-        $period = $request->query('period', 'all_time'); // Default ke 'all_time'
+        $period = $request->query('period'); 
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
 
         $query = Activity::query()->with(['causer', 'subject']);
 
-        // Filter berdasarkan pencarian
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
@@ -32,8 +29,10 @@ class ActivityLogController extends Controller
             });
         }
 
-        // Filter berdasarkan periode
-        if ($period !== 'all_time') {
+        // [DIUBAH] Logika filter tanggal yang lebih fleksibel
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()]);
+        } elseif ($period && $period !== 'all_time') {
             $dateRange = match ($period) {
                 'today' => [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()],
                 'this_week' => [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()],
@@ -46,15 +45,11 @@ class ActivityLogController extends Controller
         return $query->latest();
     }
 
-    /**
-     * Menampilkan daftar log aktivitas.
-     */
     public function index(Request $request)
     {
-        // [BARU] Cek jika ada permintaan ekspor
         if ($request->has('export')) {
             $format = $request->input('export');
-            $activities = $this->getActivityData($request)->get(); // Ambil semua data tanpa paginasi
+            $activities = $this->getActivityData($request)->get();
 
             if ($format === 'csv') {
                 return Excel::download(new ActivityLogExport($activities), 'laporan-log-aktivitas-'.now()->format('Y-m-d').'.csv');
@@ -65,19 +60,18 @@ class ActivityLogController extends Controller
             }
         }
         
-        // Jika bukan ekspor, tampilkan dengan paginasi
         $activities = $this->getActivityData($request)->paginate(20)->appends($request->query());
 
         return view('activity_log.index', [
             'activities' => $activities,
             'search' => $request->query('search'),
             'period' => $request->query('period', 'all_time'),
+            // [BARU] Kirim tanggal ke view agar bisa ditampilkan kembali di form
+            'startDate' => $request->query('start_date'),
+            'endDate' => $request->query('end_date'),
         ]);
     }
 
-    /**
-     * Menghapus semua log aktivitas.
-     */
     public function reset()
     {
         try {
