@@ -23,7 +23,14 @@
                         </div>
                     @endif
 
-                    <h3 class="font-semibold text-lg mb-4">Daftar Pengguna</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-lg">Daftar Pengguna</h3>
+                        @can('user-create')
+                            <a href="{{ route('users.create') }}" class="inline-block rounded bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">
+                                Tambah Pengguna Baru
+                            </a>
+                        @endcan
+                    </div>
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
@@ -32,10 +39,10 @@
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Nama</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Email</th>
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Peran</th>
-                                    {{-- [MODIFIKASI V2.0.0] Cek permission user-edit --}}
-                                    @can('user-edit')
+                                    {{-- [PERBAIKAN] Ganti @can('user-edit') menjadi @canany --}}
+                                    @canany(['user-edit', 'user-delete'])
                                     <th class="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Aksi</th>
-                                    @endcan
+                                    @endcanany
                                 </tr>
                             </thead>
 
@@ -49,17 +56,34 @@
                                                 {{ $user->getRoleNames()->first() ?? 'Belum ada peran' }}
                                             </span>
                                         </td>
-                                        {{-- [MODIFIKASI V2.0.0] Ganti ke @can --}}
-                                        @can('user-edit')
+                                        {{-- [PERBAIKAN] Ganti @can('user-edit') menjadi @canany --}}
+                                        @canany(['user-edit', 'user-delete'])
                                         <td class="whitespace-nowrap px-4 py-2">
-                                            <a href="{{ route('users.edit', $user) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">
-                                                Edit
-                                            </a>
+                                            {{-- [PERBAIKAN] Bungkus tombol dalam div flex --}}
+                                            <div class="flex gap-2">
+                                                @can('user-edit')
+                                                <a href="{{ route('users.edit', $user) }}" class="inline-block rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700">
+                                                    Edit
+                                                </a>
+                                                @endcan
+
+                                                {{-- [BARU] Tambahkan form dan tombol Hapus --}}
+                                                @can('user-delete')
+                                                <form action="{{ route('users.destroy', $user) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pengguna ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="inline-block rounded bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">
+                                                        Hapus
+                                                    </button>
+                                                </form>
+                                                @endcan
+                                            </div>
                                         </td>
-                                        @endcan
+                                        @endcanany
                                     </tr>
                                 @empty
                                     <tr>
+                                        {{-- [PERBAIKAN] Sesuaikan colspan menjadi 4 --}}
                                         <td colspan="4" class="whitespace-nowrap px-4 py-4 text-center text-gray-500">
                                             Tidak ada pengguna yang ditemukan.
                                         </td>
