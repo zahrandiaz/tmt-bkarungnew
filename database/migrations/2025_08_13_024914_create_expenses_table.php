@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('amount', 15, 2);
             $table->date('expense_date');
+            $table->text('description')->nullable(); // FINAL FIX: Tambahkan kolom ini
             $table->text('notes')->nullable();
             $table->string('attachment_path')->nullable(); // Untuk bukti/nota
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
