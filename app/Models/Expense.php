@@ -5,13 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-// [BARU] Import trait dan LogOptions dari Spatie Activitylog
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
 class Expense extends Model
 {
-    // [BARU] Gunakan trait LogsActivity
     use HasFactory, LogsActivity;
 
     protected $fillable = [
@@ -22,28 +20,22 @@ class Expense extends Model
         'notes',
         'attachment_path',
         'user_id',
+        'description', // FINAL FIX: Tambahkan field ini
     ];
 
-    // [BARU] Konfigurasi untuk Activity Log
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logFillable() // Mencatat semua atribut yang ada di $fillable
+            ->logFillable()
             ->setDescriptionForEvent(fn(string $eventName) => "Biaya '{$this->name}' telah di-{$eventName}")
-            ->useLogName('Expense'); // Nama log untuk mempermudah filter
+            ->useLogName('Expense');
     }
 
-    /**
-     * Mendapatkan kategori biaya yang terkait dengan biaya ini.
-     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 
-    /**
-     * Mendapatkan pengguna yang mencatat biaya ini.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -11,7 +11,6 @@ class UpdateExpenseRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Terapkan keamanan berlapis sesuai hak akses yang relevan
         return $this->user()->can('finance-crud-expense');
     }
 
@@ -27,6 +26,7 @@ class UpdateExpenseRequest extends FormRequest
             'name' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
             'expense_date' => 'required|date',
+            'description' => 'nullable|string', // FINAL FIX: Tambahkan aturan validasi
             'notes' => 'nullable|string',
             'attachment' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ];

@@ -15,12 +15,16 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->input('search');
-        $expensesQuery = Expense::with('category');
+        $search = $request->query('search');
+        $query = Expense::with('category')->latest();
         if ($search) {
-            $expensesQuery->where('name', 'like', "%{$search}%");
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('category', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
         }
-        $expenses = $expensesQuery->latest()->paginate(10)->appends(['search' => $search]);
+        $expenses = $query->paginate(10)->withQueryString();
         return view('expenses.index', compact('expenses', 'search'));
     }
 
@@ -33,27 +37,27 @@ class ExpenseController extends Controller
     public function store(StoreExpenseRequest $request)
     {
         $validated = $request->validated();
-
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
             $image = $request->file('attachment');
             $fileName = time() . '_' . Str::random(10) . '.webp';
             $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
-            Storage::disk('public')->put('expense_attachments/' . $fileName, (string) $imageCompressed);
-            $attachmentPath = 'expense_attachments/' . $fileName;
+            Storage::disk('public')->put('expense_proofs/' . $fileName, (string) $imageCompressed);
+            $attachmentPath = 'expense_proofs/' . $fileName;
         }
 
         Expense::create([
-            'expense_category_id' => $validated['expense_category_id'],
             'name' => $validated['name'],
-            'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'notes' => $validated['notes'],
+            'expense_category_id' => $validated['expense_category_id'],
+            'amount' => $validated['amount'],
+            // FINAL FIX: Gunakan null coalescing operator untuk semua field opsional
+            'description' => $validated['description'] ?? null,
+            'notes' => $validated['notes'] ?? null,
             'attachment_path' => $attachmentPath,
             'user_id' => $request->user()->id,
         ]);
-
-        return redirect()->route('expenses.index')->with('success', 'Catatan biaya berhasil ditambahkan.');
+        return redirect()->route('expenses.index')->with('success', 'Biaya berhasil ditambahkan.');
     }
 
     public function edit(Expense $expense)
@@ -65,32 +69,29 @@ class ExpenseController extends Controller
     public function update(UpdateExpenseRequest $request, Expense $expense)
     {
         $validated = $request->validated();
-
         $attachmentPath = $expense->attachment_path;
         if ($request->hasFile('attachment')) {
-            if ($expense->attachment_path) {
-                Storage::disk('public')->delete($expense->attachment_path);
+            if ($attachmentPath) {
+                Storage::disk('public')->delete($attachmentPath);
             }
             $image = $request->file('attachment');
             $fileName = time() . '_' . Str::random(10) . '.webp';
             $imageCompressed = Image::read($image->getRealPath())->toWebp(75);
-            
-            // [PERBAIKAN] Menghapus satu tanda kutip ' yang berlebih
-            Storage::disk('public')->put('expense_attachments/' . $fileName, (string) $imageCompressed);
-            
-            $attachmentPath = 'expense_attachments/' . $fileName;
+            Storage::disk('public')->put('expense_proofs/' . $fileName, (string) $imageCompressed);
+            $attachmentPath = 'expense_proofs/' . $fileName;
         }
 
         $expense->update([
-            'expense_category_id' => $validated['expense_category_id'],
             'name' => $validated['name'],
-            'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'notes' => $validated['notes'],
+            'expense_category_id' => $validated['expense_category_id'],
+            'amount' => $validated['amount'],
+             // FINAL FIX: Gunakan null coalescing operator untuk semua field opsional
+            'description' => $validated['description'] ?? null,
+            'notes' => $validated['notes'] ?? null,
             'attachment_path' => $attachmentPath,
         ]);
-
-        return redirect()->route('expenses.index')->with('success', 'Catatan biaya berhasil diperbarui.');
+        return redirect()->route('expenses.index')->with('success', 'Biaya berhasil diperbarui.');
     }
 
     public function destroy(Expense $expense)
@@ -99,6 +100,6 @@ class ExpenseController extends Controller
             Storage::disk('public')->delete($expense->attachment_path);
         }
         $expense->delete();
-        return redirect()->route('expenses.index')->with('success', 'Catatan biaya berhasil dihapus.');
+        return redirect()->route('expenses.index')->with('success', 'Biaya berhasil dihapus.');
     }
 }
