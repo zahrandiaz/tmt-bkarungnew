@@ -12,15 +12,20 @@ class UserController extends Controller
 {
     public function index()
     {
+        // [PERBAIKAN] Ambil input search ke dalam variabel
+        $search = request('search');
+
         // Menambahkan pencarian
         $users = User::with('roles')
-            ->when(request('search'), function ($query) {
-                $query->where('name', 'like', '%' . request('search') . '%')
-                    ->orWhere('email', 'like', '%' . request('search') . '%');
+            ->when($search, function ($query, $search) { // [PERBAIKAN] Gunakan variabel $search
+                $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%');
             })
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString(); // [PERBAIKAN] Tambahkan withQueryString()
             
-        return view('users.index', compact('users'));
+        // [PERBAIKAN] Kirim variabel $search ke view
+        return view('users.index', compact('users', 'search'));
     }
 
     // [BARU] Method untuk menampilkan form tambah pengguna

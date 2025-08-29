@@ -60,7 +60,7 @@ class ActivityLogController extends Controller
             }
         }
         
-        $activities = $this->getActivityData($request)->paginate(20)->appends($request->query());
+        $activities = $this->getActivityData($request)->paginate(20)->withQueryString();
 
         return view('activity_log.index', [
             'activities' => $activities,

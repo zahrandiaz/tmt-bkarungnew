@@ -25,7 +25,7 @@ class SupplierController extends Controller
             });
         }
 
-        $suppliers = $suppliersQuery->latest()->paginate(10)->appends(['search' => $search]);
+        $suppliers = $suppliersQuery->latest()->paginate(10)->withQueryString();
 
         return view('suppliers.index', compact('suppliers', 'search'));
     }

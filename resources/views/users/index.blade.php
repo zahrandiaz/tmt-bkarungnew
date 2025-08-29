@@ -32,6 +32,15 @@
                         @endcan
                     </div>
 
+                    <div class="mb-4">
+                            <form action="{{ route('users.index') }}" method="GET">
+                                <div class="flex items-center">
+                                    <input type="text" name="search" placeholder="Cari nama atau email..." class="w-full md:w-1/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value="{{ $search ?? '' }}">
+                                    <button type="submit" class="ml-2 inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Cari</button>
+                                </div>
+                            </form>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
                             <thead class="text-left">

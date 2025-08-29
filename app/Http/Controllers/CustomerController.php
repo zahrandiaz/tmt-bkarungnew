@@ -25,7 +25,7 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $customersQuery->latest()->paginate(10)->appends(['search' => $search]);
+        $customers = $customersQuery->latest()->paginate(10)->withQueryString();
 
         return view('customers.index', compact('customers', 'search'));
     }
